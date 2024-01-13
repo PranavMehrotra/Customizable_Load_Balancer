@@ -25,8 +25,12 @@ class ConsistentHashing:
     def init_hash_map(self, server_hostnames: list):
         self.lock.acquire_writer()
         for i in range(self.num_servers):
-            self.id_to_hostname[self.next_server_id] = server_hostnames[i]
+            # Check if server already exists
+            if server_hostnames[i] in self.hostname_to_id:
+                print(f"Server {server_hostnames[i]} already exists")
+                continue
             self.hostname_to_id[server_hostnames[i]] = self.next_server_id
+            self.id_to_hostname[self.next_server_id] = server_hostnames[i]
             for j in range(self.num_replicas):
                 replica_hash = self.server_hash_func(self.next_server_id, j)
                 replica_hash = self.linear_probing(replica_hash)
@@ -91,6 +95,11 @@ class ConsistentHashing:
             print("No more servers can be added, all slots are full")
             return
         self.lock.acquire_writer()
+        # Check if server already exists
+        if server_hostname in self.hostname_to_id:
+            print(f"Server {server_hostname} already exists")
+            self.lock.release_writer()
+            return
         server_id = self.next_server_id
         self.next_server_id += 1
         self.id_to_hostname[server_id] = server_hostname
@@ -101,15 +110,46 @@ class ConsistentHashing:
             bisect.insort(self.hash_map, replica_hash)
             self.hash_array[replica_hash] = server_id
             self.num_virtual_servers += 1
+        self.num_servers += 1
         self.lock.release_writer()
         # self.__unique_checker()
 
-    def remove_server(self, server_hostname):
-        # Check if server exists
-        if server_hostname not in self.hostname_to_id:
-            print("Server does not exist")
+    def add_servers(self, server_hostnames: list):
+        if len(server_hostnames) == 0:
+            print("No servers to add")
             return
         self.lock.acquire_writer()
+        for server_hostname in server_hostnames:
+            # Check if slots are available
+            if self.num_virtual_servers + self.num_replicas > self.num_slots:
+                print("No more servers can be added, all slots are full")
+                self.lock.release_writer()
+                return
+            # Check if server already exists
+            if server_hostname in self.hostname_to_id:
+                print(f"Server {server_hostname} already exists")
+                continue
+            server_id = self.next_server_id
+            self.next_server_id += 1
+            self.id_to_hostname[server_id] = server_hostname
+            self.hostname_to_id[server_hostname] = server_id
+            for i in range(self.num_replicas):
+                replica_hash = self.server_hash_func(server_id, i)
+                replica_hash = self.linear_probing(replica_hash)
+                bisect.insort(self.hash_map, replica_hash)
+                self.hash_array[replica_hash] = server_id
+                self.num_virtual_servers += 1
+            self.num_servers += 1
+        self.lock.release_writer()
+
+
+    def remove_server(self, server_hostname):
+        self.lock.acquire_writer()
+        # Check if server exists
+        if server_hostname not in self.hostname_to_id:
+            print(f"Server {server_hostname} does not exist")
+            self.lock.release_writer()
+            return
         server_id = self.hostname_to_id[server_hostname]
         del self.hostname_to_id[server_hostname]
         del self.id_to_hostname[server_id]
@@ -120,17 +160,44 @@ class ConsistentHashing:
             idx = bisect.bisect_left(self.hash_map, replica_hash)
             if idx >= len(self.hash_map) or self.hash_map[idx] != replica_hash:
                 # Should never happen
-                # print(f"Replica {i} of server {server_id} does not exist")
                 self.lock.release_writer()
                 BufferError(f"Replica {i} of server {server_id} does not exist")
             del self.hash_map[idx]
             self.num_virtual_servers -= 1
+        self.num_servers -= 1
         self.lock.release_writer()
         # self.__unique_checker()
 
+    def remove_servers(self, server_hostnames: list):
+        if len(server_hostnames) == 0:
+            print("No servers to remove")
+            return
+        self.lock.acquire_writer()
+        for server_hostname in server_hostnames:
+            # Check if server exists
+            if server_hostname not in self.hostname_to_id:
+                print(f"Server {server_hostname} does not exist")
+                continue
+            server_id = self.hostname_to_id[server_hostname]
+            del self.hostname_to_id[server_hostname]
+            del self.id_to_hostname[server_id]
+            for i in range(self.num_replicas):
+                replica_hash = self.server_hash_func(server_id, i)
+                replica_hash = self.linear_probing_delete(replica_hash, server_id)
+                self.hash_array[replica_hash] = 0
+                idx = bisect.bisect_left(self.hash_map, replica_hash)
+                if idx >= len(self.hash_map) or self.hash_map[idx] != replica_hash:
+                    # Should never happen
+                    self.lock.release_writer()
+                    BufferError(f"Replica {i} of server {server_id} does not exist")
+                del self.hash_map[idx]
+                self.num_virtual_servers -= 1
+            self.num_servers -= 1
+        self.lock.release_writer()
+
     def print_hash_map(self):
         self.lock.acquire_reader()
-        print(f"Number of virtual servers: {self.num_virtual_servers}\n Hash map: ", end="")
+        print(f"Number of virtual servers: {self.num_virtual_servers}\nHash map: ", end="")
         print(self.hash_map)
         # print(self.hash_array)
         self.lock.release_reader()
@@ -161,14 +228,19 @@ if __name__ == "__main__":
     consistent_hashing.remove_server("server2")
     consistent_hashing.print_hash_map()
     # time.sleep(5)
-    # consistent_hashing.add_server("server5")
-    # consistent_hashing.print_hash_map()
-    # consistent_hashing.remove_server("server3")
-    # consistent_hashing.print_hash_map()
+    print(consistent_hashing.get_server(1))
+    print(consistent_hashing.get_server(2))
+    print(consistent_hashing.get_server(5))
+
+    # Advanced functionality
+    consistent_hashing.add_servers(["server5", "server7"])
+    consistent_hashing.print_hash_map()
+    consistent_hashing.remove_servers(["server3","server5"])
+    consistent_hashing.print_hash_map()
     # consistent_hashing.add_server("server6")
     # consistent_hashing.print_hash_map()
     # consistent_hashing.remove_server("server1")
     # consistent_hashing.print_hash_map()
     print(consistent_hashing.get_server(1))
     print(consistent_hashing.get_server(2))
-    print(consistent_hashing.get_server(5))
+    print(consistent_hashing.get_server(7))
