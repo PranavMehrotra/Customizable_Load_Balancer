@@ -16,4 +16,8 @@ async def send_requests_a():
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(send_requests_a())
+    try :
+        loop.run_until_complete(send_requests_a())
+    finally:
+        loop.close()
+        
