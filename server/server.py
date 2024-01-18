@@ -6,16 +6,14 @@ import random
 import string
 import asyncio
 
+server_id = ""
+
 def generate_random_string(length):
     letters = string.ascii_letters
     return ''.join(random.choice(letters) for _ in range(length))
 
 async def home(request):
     try:
-        server_id = os.environ.get("SERVER_ID")
-        if not server_id:
-            # Generate a random string if SERVER_ID is not set
-            server_id = generate_random_string(6)
 
         # Print when the request is received
         print(f"Received Home Request at {datetime.datetime.now()}")
@@ -66,4 +64,8 @@ def run_server():
     web.run_app(app, port=5000)
 
 if __name__ == '__main__':
+    server_id = os.environ.get("SERVER_ID")
+    if not server_id:
+        # Generate a random string if SERVER_ID is not set
+        server_id = generate_random_string(6)
     asyncio.run(run_server())
