@@ -22,7 +22,7 @@ class LoadBalancer:
     def add_servers(self, num_add, hostnames:list):
         error=""
         temp_new_servers = {}
-        if (hostnames.len() > num_add):
+        if (len(hostnames) > num_add):
             print("<Error> Length of hostname list is more than newly added instances")
             error = "<Error> Length of hostname list is more than newly added instances"
             return -1, [], error
@@ -33,12 +33,13 @@ class LoadBalancer:
                 self.rw_lock.acquire_reader()
                 if (hostname in self.servers):
                     print("<Error> Hostname: '" + hostname + "' already exists in the active list of servers!") 
-                else:
-                    temp_new_servers[hostname] = 1
+                    self.rw_lock.release_reader()
+                    continue
                 self.rw_lock.release_reader()
+                temp_new_servers[hostname] = 1
             
             # add the remaining servers to the list by generating new random hostnames for them
-            for i in range(num_add - hostnames.len()):
+            for i in range(num_add - len(hostnames)):
                 new_hostname = generate_new_hostname()
                 self.rw_lock.acquire_reader()
                 while (new_hostname in self.servers or new_hostname in temp_new_servers):
@@ -66,10 +67,17 @@ class LoadBalancer:
             self.rw_lock.release_reader()
             error = "<Error> No servers to remove!"
             return -1, [], error
+        if (num_rem > len(self.servers)):
+            print("<Error> Number of servers to remove is more than the number of active servers!")
+            self.rw_lock.release_reader()
+            error = "<Error> Number of servers to remove is more than the number of active servers!"
+            return -1, [], error
         self.rw_lock.release_reader()
         
-        temp_rm_servers = {}
-        if (hostnames.len() > num_rem):
+        temp_rm_servers = set()  # Use set instead of dictionary for faster additions and subtractions
+        # Make hostname list unique(basically a set)
+        hostnames = set(hostnames)
+        if (len(hostnames) > num_rem):
             print("<Error> Length of hostname list is more than removable instances")
             error = "<Error> Length of hostname list is more than removable instances"
             return -1, [], error
@@ -79,26 +87,39 @@ class LoadBalancer:
                 if (hostname not in self.servers):
                     print("<Error> Hostname: '" + hostname + "' does not exist in the active list of servers!")    
                 else:
-                    temp_rm_servers[hostname] = 1
+                    # temp_rm_servers[hostname] = 1
+                    temp_rm_servers.add(hostname)          ## FASTER
                 self.rw_lock.release_reader()
                     
+            ## VERY SLOW:
             # remove remaining servers from the list by randomly selecting them from the list of active servers
-            for i in range(num_rem - hostnames.len()):
+            # for i in range(num_rem - len(hostnames)):
+            #     self.rw_lock.acquire_reader()
+            #     if (len(self.servers) == 0):
+            #         print("<Error> No active server left. Can't remove any more servers!")
+            #         # error = "<Error> No active server left. Can't remove any more servers!"
+            #         self.rw_lock.release_reader()
+            #         break
+            #     while(True):
+            #         rm_hostname = random.choice(list(self.servers.keys() - temp_rm_servers.keys()))
+            #         if (rm_hostname not in temp_rm_servers):
+            #             temp_rm_servers[rm_hostname] = 1
+            #             break
+            #     self.rw_lock.release_reader()
+            
+            ## FASTER: (No need for random selection)
+            if num_rem > len(temp_rm_servers):
                 self.rw_lock.acquire_reader()
-                if (len(self.servers) == 0):
-                    print("<Error> No active server left. Can't remove any more servers!")
-                    # error = "<Error> No active server left. Can't remove any more servers!"
-                    self.rw_lock.release_reader()
-                    break
+                if num_rem == len(self.servers):
+                    # Extend the list of servers to be removed with all the remaining servers
+                    temp_rm_servers = set(self.servers.keys())
+                else:
+                    left = num_rem - len(temp_rm_servers)
+                    tem_set = set(self.servers.keys()) - temp_rm_servers
+                    # Extend the list of servers to be removed with randomly selected servers
+                    temp_rm_servers = temp_rm_servers.union(random.sample(tem_set, left))  # This random.sample can also be removed, just take the first 'left' no. of servers :)
                 self.rw_lock.release_reader()
-                    
-                self.rw_lock.acquire_reader()
-                while(True):
-                    rm_hostname = random.choice(list(self.servers.keys() - temp_rm_servers.keys()))
-                    if (rm_hostname not in temp_rm_servers):
-                        temp_rm_servers[rm_hostname] = 1
-                        break
-                self.rw_lock.release_reader()
+                
             
         # servers_dne is the list of servers that were not found in the list of active servers (dne for does not exist) when trying to remove them
         # this could be because the server got down before it could be removed, and was replaced by a new server of different hostname
@@ -152,7 +173,7 @@ class LoadBalancer:
                 response_code = 200
                 # message to be shown: final active server list, not just those added
                 self.rw_lock.acquire_writer() # given writer priority here to prevent any other writer to add/rm server while this is waiting to read the servers
-                response_dict["message"] = {"N": self.servers.len(), "replicas": [server for server in self.servers]}
+                response_dict["message"] = {"N": len(self.servers), "replicas": [server for server in self.servers]}
                 self.rw_lock.release_writer()
                 response_dict["status"] = "success"
                 
@@ -171,7 +192,7 @@ class LoadBalancer:
             else:
                 response_code = 200
                 self.rw_lock.acquire_writer() # given writer priority here to prevent any other writer to add/rm server while this is waiting to read the servers
-                response_dict["message"] = {"N": self.servers.len(), "replicas": [server for server in self.servers]}
+                response_dict["message"] = {"N": len(self.servers), "replicas": [server for server in self.servers]}
                 self.rw_lock.release_writer()
                 response_dict["status"] = "success"
                 
@@ -182,7 +203,7 @@ class LoadBalancer:
         elif (req_type == "list"):
                 response_code = 200
                 self.rw_lock.acquire_writer() # given writer priority here to prevent any other writer to add/rm server while this is waiting to read the servers
-                response_dict["message"] = {"N": self.servers.len(), "replicas": [server for server in self.servers]}
+                response_dict["message"] = {"N": len(self.servers), "replicas": [server for server in self.servers]}
                 self.rw_lock.release_writer()
                 response_dict["status"] = "success"
           
