@@ -1,8 +1,11 @@
 import bisect
 import time
 import numpy as np
+import sys
+import os
 
-from RWLock import RWLock
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from consistent_hashing.RWLock import RWLock
 
 class ConsistentHashing:
     def __init__(self, server_hostnames: list, num_servers=3, num_replicas=9, num_slots=512):
@@ -115,6 +118,10 @@ class ConsistentHashing:
         # self.__unique_checker()
 
     def add_servers(self, server_hostnames: list):
+        
+        servers_added = []
+        new_server_ctr = 0
+        
         if len(server_hostnames) == 0:
             print("No servers to add")
             return
@@ -140,10 +147,15 @@ class ConsistentHashing:
                 self.hash_array[replica_hash] = server_id
                 self.num_virtual_servers += 1
             self.num_servers += 1
+            servers_added.append(server_hostname)
+            new_server_ctr += 1
         self.lock.release_writer()
 
+        return new_server_ctr, servers_added
 
     def remove_server(self, server_hostname):
+ 
+        
         self.lock.acquire_writer()
         # Check if server exists
         if server_hostname not in self.hostname_to_id:
@@ -172,6 +184,9 @@ class ConsistentHashing:
         if len(server_hostnames) == 0:
             print("No servers to remove")
             return
+        
+        servers_removed = []
+        removed_server_ctr = 0
         self.lock.acquire_writer()
         for server_hostname in server_hostnames:
             # Check if server exists
@@ -193,7 +208,11 @@ class ConsistentHashing:
                 del self.hash_map[idx]
                 self.num_virtual_servers -= 1
             self.num_servers -= 1
+            servers_removed.append(server_hostname)
+            removed_server_ctr += 1
         self.lock.release_writer()
+        
+        return removed_server_ctr, servers_removed
 
     def print_hash_map(self):
         self.lock.acquire_reader()

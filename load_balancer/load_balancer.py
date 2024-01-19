@@ -10,15 +10,20 @@ import random
 # add the path to the parent directory to the sys.path list
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from consistent_hashing.RWLock import RWLock
+from consistent_hashing import consistent_hashing
 from utils import generate_new_hostname
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
 class LoadBalancer:
-    def __init__(self, port):
+    def __init__(self, port=None):
         self.port = port
         self.servers = {} # dictionary of active servers (key: hostname, value: port)
         self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers dictionary
         self.socket = None
+        self.consistent_hashing = consistent_hashing.ConsistentHashing(server_hostnames=['server1', 'server2', 'server3'])
+        self.servers['server1'] = 5000
+        self.servers['server2'] = 5001
+        self.servers['server3'] = 5002
 
     def add_servers(self, num_add, hostnames:list):
         error=""
