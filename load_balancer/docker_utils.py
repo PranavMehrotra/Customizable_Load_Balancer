@@ -1,6 +1,7 @@
-def spawn_server(hostname):
+
+def spawn_server_cntnr(hostname):
     return
 
 
-def remove_server(hostname):
+def kill_server_cntnr(hostname):
     return

@@ -11,6 +11,7 @@ import random
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from consistent_hashing.RWLock import RWLock
 from utils import generate_new_hostname
+from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
 class LoadBalancer:
     def __init__(self, port):
@@ -21,14 +22,14 @@ class LoadBalancer:
 
     def add_servers(self, num_add, hostnames:list):
         error=""
-        temp_new_servers = {}
+        temp_new_servers = set()
         if (len(hostnames) > num_add):
             print("<Error> Length of hostname list is more than newly added instances")
             error = "<Error> Length of hostname list is more than newly added instances"
             return -1, [], error
             
         else:
-            # add the servers whose hostnames are provided to the list
+            # add the servers whose hostnames are provided, to the set
             for hostname in hostnames:
                 self.rw_lock.acquire_reader()
                 if (hostname in self.servers):
@@ -36,7 +37,7 @@ class LoadBalancer:
                     self.rw_lock.release_reader()
                     continue
                 self.rw_lock.release_reader()
-                temp_new_servers[hostname] = 1
+                temp_new_servers.add(hostname)
             
             # add the remaining servers to the list by generating new random hostnames for them
             for i in range(num_add - len(hostnames)):
@@ -45,17 +46,40 @@ class LoadBalancer:
                 while (new_hostname in self.servers or new_hostname in temp_new_servers):
                     new_hostname = generate_new_hostname()
                 self.rw_lock.release_reader()
-                temp_new_servers[new_hostname] = 1
+                temp_new_servers.add(new_hostname)
+        
+        final_add_server_dict = {}        
+        
+        ### TO-D0: Call the server spawning module to spawn the new servers:
+        for server in temp_new_servers:
+            print("Spawning server: " + server)
+            port = spawn_server_cntnr(server) ## function from docker_utils.py
+            ### TO-DO: Add error handling here in case the server could not be spawned
+            if (port == -1):
+                print("<Error> Server: '" + server + "' could not be spawned!")
+
+            else:     # add the newly spawned server to the dictionary of servers
+                final_add_server_dict[server] = port
+            
+        
           
         # send the temorary list of new servers to be added to the consistent hashing module
         # the consistent hasing module will finally return the list of servers that were finally added
-        num_added, new_servers = self.consistent_hashing.add_servers([server for server in temp_new_servers])
-              
+        num_added, new_servers = self.consistent_hashing.add_servers([server for server in final_add_server_dict.keys()])
+        
+
         # # add the newly added servers to the dictionary of servers
         self.rw_lock.acquire_writer()
         for server in new_servers:
-            self.servers[server] = 1 # value kept as 1 for now, will be changed to port no later when server is set up
+            self.servers[server] = final_add_server_dict[server] # port number
         self.rw_lock.release_writer()
+        
+        ### TO-DO: For the servers that couldn't be added to the CH module (possibly due to lack of space), remove them from the list of servers to be added
+        ### Also, close the docker containers and corresponding threads  
+        for server in final_add_server_dict.keys() - new_servers:
+            kill_server_cntnr(server)
+            
+        # final_add_server_dict = {server: final_add_server_dict[server] for server in new_servers}
         
         return num_added, new_servers, error
     
@@ -121,26 +145,34 @@ class LoadBalancer:
                 self.rw_lock.release_reader()
                 
             
-        # servers_dne is the list of servers that were not found in the list of active servers (dne for does not exist) when trying to remove them
-        # this could be because the server got down before it could be removed, and was replaced by a new server of different hostname
-        num_rem, servers_dne = self.consistent_hashing.remove_servers([server for server in temp_rm_servers])
+       # servers_rem_f is the list of servers that were finally removed from CH module
+        num_rem_f, servers_rem_f = self.consistent_hashing.remove_servers([server for server in temp_rm_servers])
         
         # remove the newly removed servers from the dictionary of servers
+        # self.rw_lock.acquire_writer()
+        # for server in temp_rm_servers:
+        #     if (server in servers_dne): # this is for the case when server got down before it could be removed
+        #         # assert(server not in self.servers)
+        #         if (server in self.servers): # this should never happen
+        #             print("<Error> This shoudn't happen! Server should have already been removed!")
+        #             self.servers.pop(server)
+        #     else:
+        #         self.servers.pop(server)
+    
+        # self.rw_lock.release_writer()
+        
+        # remove the final list of servers from the dictionary of servers
         self.rw_lock.acquire_writer()
-        for server in temp_rm_servers:
-            if (server in servers_dne): # this is for the case when server got down before it could be removed
-                # assert(server not in self.servers)
-                if (server in self.servers): # this should never happen
-                    print("<Error> This shoudn't happen! Server should have already been removed!")
-                    self.servers.pop(server)
-            else:
-                self.servers.pop(server)
-    
+        for server in servers_rem_f:
+            self.servers.pop(server)
+            # print("Server: " + server + " removed!")
         self.rw_lock.release_writer()
-    
-    
-        # return num_rem, [server for server in [temp_rm_servers - servers_dne]], error
-        return len(temp_rm_servers), [server for server in temp_rm_servers], error # can simply keep this to not make it complicated as compared to above return 
+        
+        # close the docker containers and corresponding threads for the servers that were finally removed
+        for server in servers_rem_f:
+            kill_server_cntnr(server)
+        
+        return len(servers_rem_f), servers_rem_f, error 
     
     def list_active_servers(self):
         
