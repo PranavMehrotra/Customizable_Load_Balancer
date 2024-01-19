@@ -16,14 +16,23 @@ from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
 class LoadBalancer:
     def __init__(self, port=None):
+        
         self.port = port
         self.servers = {} # dictionary of active servers (key: hostname, value: port)
         self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers dictionary
         self.socket = None
+        
+        # spawn the initial set of servers
+        for hostname in ['server1', 'server2', 'server3']:
+            port = spawn_server_cntnr(hostname)
+            if (port == -1):
+                print("<Error> Server: '" + hostname + "' could not be spawned!")
+                return
+            self.rw_lock.acquire_writer()
+            self.servers[hostname] = port
+            self.rw_lock.release_writer()
+        
         self.consistent_hashing = consistent_hashing.ConsistentHashing(server_hostnames=['server1', 'server2', 'server3'])
-        self.servers['server1'] = 5000
-        self.servers['server2'] = 5001
-        self.servers['server3'] = 5002
 
     def add_servers(self, num_add, hostnames:list):
         error=""

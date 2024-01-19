@@ -10,7 +10,7 @@ import asyncio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-# from main import active_flag
+
 from consistent_hashing import RWLock, consistent_hashing
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
@@ -18,6 +18,7 @@ from docker_utils import spawn_server_cntnr, kill_server_cntnr
 async def check_heartbeat(Lb, server_name, server_ip="127.0.0.1", server_port=5000):
     print("Heartbeat thread started for server: ", server_name)
     
+    cntr = 0
     while True:
         print("Starting a session!")
         async with aiohttp.ClientSession() as session:
@@ -27,11 +28,14 @@ async def check_heartbeat(Lb, server_name, server_ip="127.0.0.1", server_port=50
                 async with session.get(f'http://{server_ip}:{server_port}/heartbeat') as response:
                     print("Connected to server, Response received!")
                     # if response.status != 200 and {await response.text()}['message'] != "ok":
+                    
+                    ## To-Do: Check for timeout also
+                    
                     if response.status != 200:
-                        Lb.active_flag[server_name] += 1
-                        if Lb.active_flag[server_name] >= 2:
+                        cntr += 1
+                        if cntr >= 2:
                             print(f"Server {server_name} is down!")
-                            Lb.active_flag[server_name] = 0
+                            cntr = 0
                             
                             #remove server from
                             Lb.remove_servers(1, [server_name])
@@ -44,12 +48,12 @@ async def check_heartbeat(Lb, server_name, server_ip="127.0.0.1", server_port=50
                             
                             break
                     else :
-                        Lb.active_flag[server_name] = 0        
+                        cntr = 0       
 
             # except aiohttp.client_exceptions.ClientConnectorError as e:
             except Exception as e: # this is better as it is more generic and will catch all exceptions
                 print(f"Could not connect to server {server_name} due to {str(e.__class__.__name__)}")
-                Lb.active_flag[server_name] = 0 
+                cntr = 0 
                     
                 #remove server from
                 num_rem, servers_rem, error = Lb.remove_servers(1, [server_name])
