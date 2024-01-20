@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+
+  load_balancer:
+    build: load_balancer/ # Path to the Dockerfile for the client
+    image: load_balancer_img
+    container_name: load_balancer_con
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
+    networks:
+      network1:
+        aliases:
+          - load_balancer
+
+  server:
+    build: server/
+    image: server_img
+    container_name: server1
+    ports:
+      - "5000:5000"
+    networks:
+      network1:
+        aliases:
+          - server1
+    environment:
+      SERVER_ID: server1
+
+networks:
+  network1:
+    name: mynet

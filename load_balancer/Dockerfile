@@ -1,10 +1,9 @@
 FROM python:latest
 
-COPY server.py /server/
-COPY requirements.txt /server/
+COPY . /load_balancer/
 
 # Set the working directory
-WORKDIR /server/
+WORKDIR /load_balancer/
 
 RUN apt-get update
 RUN apt-get install -y python3
@@ -12,7 +11,7 @@ RUN apt-get install -y python3-pip
 
 
 RUN pip install -r requirements.txt
-RUN chmod +x server.py
+RUN chmod +x test.py
 
 RUN apt-get update
 RUN apt-get -y install sudo
@@ -28,9 +27,9 @@ RUN echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
 RUN  apt-get update
 RUN apt-get -y install docker-ce-cli
+
 
 ENV USER=theuser
 RUN adduser --home /home/$USER --disabled-password --gecos GECOS $USER \
@@ -43,6 +42,4 @@ USER $USER
 
 ENV HOME=/home/$USER
 
-EXPOSE 5000
-
-CMD ["python", "server.py"]
+CMD ["python", "test.py"]

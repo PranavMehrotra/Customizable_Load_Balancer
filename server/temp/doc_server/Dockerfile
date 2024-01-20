@@ -1,10 +1,10 @@
 FROM python:latest
 
-COPY client.py /client/
-COPY requirements.txt /client/
+COPY server.py /server/
+COPY ../requirements.txt /server/
 
 # Set the working directory
-WORKDIR /client/
+WORKDIR /server/
 
 RUN apt-get update
 RUN apt-get install -y python3
@@ -12,7 +12,7 @@ RUN apt-get install -y python3-pip
 
 
 RUN pip install -r requirements.txt
-RUN chmod +x client.py
+RUN chmod +x server.py
 
 RUN apt-get update
 RUN apt-get -y install sudo
@@ -28,9 +28,9 @@ RUN echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
 RUN  apt-get update
 RUN apt-get -y install docker-ce-cli
-
 
 ENV USER=theuser
 RUN adduser --home /home/$USER --disabled-password --gecos GECOS $USER \
@@ -43,4 +43,6 @@ USER $USER
 
 ENV HOME=/home/$USER
 
-CMD ["python", "client.py"]
+EXPOSE 5000
+
+CMD ["python", "server.py"]

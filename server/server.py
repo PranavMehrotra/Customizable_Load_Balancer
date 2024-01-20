@@ -68,4 +68,4 @@ if __name__ == '__main__':
     if not server_id:
         # Generate a random string if SERVER_ID is not set
         server_id = generate_random_string(6)
-    asyncio.run(run_server())
+    run_server()
