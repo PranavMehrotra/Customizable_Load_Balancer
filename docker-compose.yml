@@ -17,15 +17,20 @@ services:
   server:
     build: server/
     image: server_img
-    container_name: server1
+    # container_name: server1  # This is not needed as docker-compose will create a unique name for each container
     ports:
-      - "5000:5000"
+    # host:container port mapping
+    # fixing host port makes it same for all containers, causing conflicts, hence not specified
+      - "5000"  # What does 5000:5000 in assignment mean?
     networks:
       network1:
         aliases:
           - server1
-    environment:
-      SERVER_ID: server1
+    # removed this since server.py sets server name based on SERVER_ID env variable, so all servers respond with the same name
+    # environment:
+    #   SERVER_ID: server1
+    deploy:
+      replicas: 3 
 
 networks:
   network1:
