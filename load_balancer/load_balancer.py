@@ -18,18 +18,20 @@ class LoadBalancer:
     def __init__(self, port=None):
         
         self.port = port
-        self.servers = {} # dictionary of active servers (key: hostname, value: port)
-        self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers dictionary
+        # self.servers = {} # dictionary of active servers (key: hostname, value: port)
+        self.servers = set() # set of active servers, no need to store port number, as it is always 5000
+        self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers set
         self.socket = None
         
         # spawn the initial set of servers
         for hostname in ['server1', 'server2', 'server3']:
-            port = spawn_server_cntnr(hostname)
-            if (port == -1):
+            done = spawn_server_cntnr(hostname)
+            if not done:
                 print("<Error> Server: '" + hostname + "' could not be spawned!")
                 return
             self.rw_lock.acquire_writer()
-            self.servers[hostname] = port
+            # self.servers[hostname] = port
+            self.servers.add(hostname)
             self.rw_lock.release_writer()
         
         self.consistent_hashing = consistent_hashing.ConsistentHashing(server_hostnames=['server1', 'server2', 'server3'])
@@ -64,35 +66,36 @@ class LoadBalancer:
                 self.rw_lock.release_reader()
                 temp_new_servers.add(new_hostname)
         
-        final_add_server_dict = {}        
+        final_add_server_set = set()  # Use set instead of dictionary for faster additions and subtractions        
         
         ### TO-D0: Call the server spawning module to spawn the new servers:
         for server in temp_new_servers:
             print("Spawning server: " + server)
-            port = spawn_server_cntnr(server) ## function from docker_utils.py
+            done = spawn_server_cntnr(server) ## function from docker_utils.py
             ### TO-DO: Add error handling here in case the server could not be spawned
-            if (port == -1):
+            if not done:
                 print("<Error> Server: '" + server + "' could not be spawned!")
 
             else:     # add the newly spawned server to the dictionary of servers
-                final_add_server_dict[server] = port
+                final_add_server_set.add(server)
             
         
           
         # send the temorary list of new servers to be added to the consistent hashing module
         # the consistent hasing module will finally return the list of servers that were finally added
-        new_servers = self.consistent_hashing.add_servers([server for server in final_add_server_dict.keys()])
+        new_servers = self.consistent_hashing.add_servers(list(final_add_server_set))
         
 
         # # add the newly added servers to the dictionary of servers
         self.rw_lock.acquire_writer()
         for server in new_servers:
-            self.servers[server] = final_add_server_dict[server] # port number
+            # self.servers[server] = final_add_server_dict[server] # port number
+            self.servers.add(server)
         self.rw_lock.release_writer()
         
         ### TO-DO: For the servers that couldn't be added to the CH module (possibly due to lack of space), remove them from the list of servers to be added
         ### Also, close the docker containers and corresponding threads  
-        for server in final_add_server_dict.keys() - new_servers:
+        for server in final_add_server_set - new_servers:
             kill_server_cntnr(server)
             
         # final_add_server_dict = {server: final_add_server_dict[server] for server in new_servers}
@@ -152,10 +155,12 @@ class LoadBalancer:
                 self.rw_lock.acquire_reader()
                 if num_rem == len(self.servers):
                     # Extend the list of servers to be removed with all the remaining servers
-                    temp_rm_servers = set(self.servers.keys())
+                    # temp_rm_servers = set(self.servers.keys())
+                    temp_rm_servers = set(self.servers)
                 else:
                     left = num_rem - len(temp_rm_servers)
-                    tem_set = set(self.servers.keys()) - temp_rm_servers
+                    # tem_set = set(self.servers.keys()) - temp_rm_servers
+                    tem_set = self.servers - temp_rm_servers
                     # Extend the list of servers to be removed with randomly selected servers
                     temp_rm_servers = temp_rm_servers.union(random.sample(tem_set, left))  # This random.sample can also be removed, just take the first 'left' no. of servers :)
                 self.rw_lock.release_reader()
@@ -180,8 +185,13 @@ class LoadBalancer:
         # remove the final list of servers from the dictionary of servers
         self.rw_lock.acquire_writer()
         for server in servers_rem_f:
-            self.servers.pop(server)
-            # print("Server: " + server + " removed!")
+            try:
+                # self.servers.pop(server)
+                self.servers.remove(server)
+                # print("Server: " + server + " removed!")
+            except KeyError:
+                print("<Error> Server: '" + server + "' does not exist in the active list of servers!")
+                continue
         self.rw_lock.release_writer()
         
         # close the docker containers and corresponding threads for the servers that were finally removed
@@ -190,7 +200,11 @@ class LoadBalancer:
         
         return len(servers_rem_f), servers_rem_f, error 
                 
-               
+    def list_servers(self):
+        self.rw_lock.acquire_reader()
+        servers_list = list(self.servers)
+        self.rw_lock.release_reader()
+        return servers_list           
         
         
                 

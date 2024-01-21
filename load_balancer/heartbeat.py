@@ -10,12 +10,10 @@ import asyncio
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-
-from consistent_hashing import RWLock, consistent_hashing
-from docker_utils import spawn_server_cntnr, kill_server_cntnr
+from load_balancer.load_balancer import LoadBalancer
 
 class HeartBeat(threading.Thread):
-    def __init__(self, lb, server_name, server_port=5000):
+    def __init__(self, lb: LoadBalancer, server_name, server_port=5000):
         super(HeartBeat, self).__init__()
         self._lb = lb
         self._server_name = server_name

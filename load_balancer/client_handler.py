@@ -2,10 +2,12 @@ from aiohttp import web
 import random
 import asyncio
 
-from load_balancer import load_balancer
+from load_balancer.load_balancer import LoadBalancer
+from load_balancer.heartbeat import HeartBeat
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
-lb : load_balancer.LoadBalancer = ""
+lb : LoadBalancer = ""
+hb_threads = {}
 
 async def home(request):
     global lb
@@ -35,7 +37,13 @@ async def not_found(request):
 
 def run_load_balancer():
     global lb
-    lb = load_balancer.LoadBalancer()
+    global hb_threads
+    lb = LoadBalancer()
+    tem_servers = lb.list_servers()
+    for server in tem_servers:
+        t1 = HeartBeat(lb, server)
+        hb_threads[server] = t1
+        t1.start()
     app = web.Application()
     app.router.add_get('/home', home)
     app.router.add_get('/add', add_server_handler)
@@ -43,3 +51,6 @@ def run_load_balancer():
     app.router.add_get('/rep', rep_handler)
 
     app.router.add_route('*', '/{tail:.*}', not_found)
+
+    for thread in hb_threads.values():
+        thread.join()
