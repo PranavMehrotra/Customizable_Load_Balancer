@@ -37,6 +37,8 @@ class LoadBalancer:
     def add_servers(self, num_add, hostnames:list):
         error=""
         temp_new_servers = set()
+        # Make hostnames list unique(basically a set)
+        hostnames = set(hostnames)
         if (len(hostnames) > num_add):
             print("<Error> Length of hostname list is more than newly added instances")
             error = "<Error> Length of hostname list is more than newly added instances"
@@ -54,7 +56,7 @@ class LoadBalancer:
                 temp_new_servers.add(hostname)
             
             # add the remaining servers to the list by generating new random hostnames for them
-            for i in range(num_add - len(hostnames)):
+            for i in range(num_add - len(temp_new_servers)):
                 new_hostname = generate_new_hostname()
                 self.rw_lock.acquire_reader()
                 while (new_hostname in self.servers or new_hostname in temp_new_servers):
@@ -79,7 +81,7 @@ class LoadBalancer:
           
         # send the temorary list of new servers to be added to the consistent hashing module
         # the consistent hasing module will finally return the list of servers that were finally added
-        num_added, new_servers = self.consistent_hashing.add_servers([server for server in final_add_server_dict.keys()])
+        new_servers = self.consistent_hashing.add_servers([server for server in final_add_server_dict.keys()])
         
 
         # # add the newly added servers to the dictionary of servers
@@ -95,7 +97,7 @@ class LoadBalancer:
             
         # final_add_server_dict = {server: final_add_server_dict[server] for server in new_servers}
         
-        return num_added, new_servers, error
+        return len(new_servers), new_servers, error
     
     def remove_servers(self, num_rem, hostnames:list):
         error = ""
@@ -160,7 +162,7 @@ class LoadBalancer:
                 
             
        # servers_rem_f is the list of servers that were finally removed from CH module
-        num_rem_f, servers_rem_f = self.consistent_hashing.remove_servers([server for server in temp_rm_servers])
+        servers_rem_f = self.consistent_hashing.remove_servers([server for server in temp_rm_servers])
         
         # remove the newly removed servers from the dictionary of servers
         # self.rw_lock.acquire_writer()
@@ -187,84 +189,6 @@ class LoadBalancer:
             kill_server_cntnr(server)
         
         return len(servers_rem_f), servers_rem_f, error 
-    
-    def list_active_servers(self):
-        
-        self.rw_lock.acquire_reader()
-        active_servers = [server for server in self.servers]
-        self.rw_lock.release_reader()
-        
-        return len(active_servers), active_servers
-        
-    def create_new_server(self):
-        pass
-    
-    def probe_servers(self):
-        pass
-    
-    def process_client_request(self, req_type, req_dict={}):
-        response_code = 0
-        response_dict = {}
-        
-        ### ADD request type
-        if (req_type == "add"):
-            num_add, hostnames = req_dict["n"], req_dict["hostnames"]
-            num_added, new_servers, error = self.add_servers(num_add, hostnames)
-            if (num_added == -1):
-                response_code = 400
-                response_dict["message"] = error
-                response_dict["status"] = "failure"
-            
-            else:
-                response_code = 200
-                # message to be shown: final active server list, not just those added
-                self.rw_lock.acquire_writer() # given writer priority here to prevent any other writer to add/rm server while this is waiting to read the servers
-                response_dict["message"] = {"N": len(self.servers), "replicas": [server for server in self.servers]}
-                self.rw_lock.release_writer()
-                response_dict["status"] = "success"
-                
-                ### need to add additional messages here regarding servers that could not be added (maybe cause already existing)
-                response_dict["additional-info"] = "Successfully added " + str(num_added) + " servers!"
-          
-        ### REMOVE request type      
-        elif (req_type == "remove"):
-            num_rem, hostnames = req_dict["n"], req_dict["hostnames"]
-            num_removed, removed_servers, error = self.remove_servers(num_rem, hostnames)
-            if (num_removed == -1):
-                response_code = 400
-                response_dict["message"] = error
-                response_dict["status"] = "failure"
-            
-            else:
-                response_code = 200
-                self.rw_lock.acquire_writer() # given writer priority here to prevent any other writer to add/rm server while this is waiting to read the servers
-                response_dict["message"] = {"N": len(self.servers), "replicas": [server for server in self.servers]}
-                self.rw_lock.release_writer()
-                response_dict["status"] = "success"
-                
-                ### need to add additional messages here regarding servers that could not be removed (maybe cause name not found)
-                response_dict["additional-info"] = "Successfully removed " + str(num_removed) + " servers!"
-         
-        ### LIST ACTIVE SERVERS request type       
-        elif (req_type == "list"):
-                response_code = 200
-                self.rw_lock.acquire_writer() # given writer priority here to prevent any other writer to add/rm server while this is waiting to read the servers
-                response_dict["message"] = {"N": len(self.servers), "replicas": [server for server in self.servers]}
-                self.rw_lock.release_writer()
-                response_dict["status"] = "success"
-          
-        ### PATH request type (not clear what it means)
-        elif (req_type == "path"):
-            pass
-           
-        ### INVALID request type     
-        else:
-            response_code = 400
-            response_dict["message"] = "Invalid request type!"
-            response_dict["status"] = "failure"
-        
-        
-        return response_code, response_dict
                 
                
         

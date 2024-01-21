@@ -120,18 +120,18 @@ class ConsistentHashing:
     def add_servers(self, server_hostnames: list):
         
         servers_added = []
-        new_server_ctr = 0
+        # new_server_ctr = 0
         
         if len(server_hostnames) == 0:
             print("No servers to add")
-            return
+            return []
         self.lock.acquire_writer()
         for server_hostname in server_hostnames:
             # Check if slots are available
             if self.num_virtual_servers + self.num_replicas > self.num_slots:
                 print("No more servers can be added, all slots are full")
                 self.lock.release_writer()
-                return
+                return []
             # Check if server already exists
             if server_hostname in self.hostname_to_id:
                 print(f"Server {server_hostname} already exists")
@@ -148,10 +148,10 @@ class ConsistentHashing:
                 self.num_virtual_servers += 1
             self.num_servers += 1
             servers_added.append(server_hostname)
-            new_server_ctr += 1
+            # new_server_ctr += 1
         self.lock.release_writer()
 
-        return new_server_ctr, servers_added
+        return servers_added
 
     def remove_server(self, server_hostname):
  
@@ -161,7 +161,7 @@ class ConsistentHashing:
         if server_hostname not in self.hostname_to_id:
             print(f"Server {server_hostname} does not exist")
             self.lock.release_writer()
-            return
+            return []
         server_id = self.hostname_to_id[server_hostname]
         del self.hostname_to_id[server_hostname]
         del self.id_to_hostname[server_id]
@@ -183,10 +183,10 @@ class ConsistentHashing:
     def remove_servers(self, server_hostnames: list):
         if len(server_hostnames) == 0:
             print("No servers to remove")
-            return
+            return []
         
         servers_removed = []
-        removed_server_ctr = 0
+        # removed_server_ctr = 0
         self.lock.acquire_writer()
         for server_hostname in server_hostnames:
             # Check if server exists
@@ -209,10 +209,10 @@ class ConsistentHashing:
                 self.num_virtual_servers -= 1
             self.num_servers -= 1
             servers_removed.append(server_hostname)
-            removed_server_ctr += 1
+            # removed_server_ctr += 1
         self.lock.release_writer()
         
-        return removed_server_ctr, servers_removed
+        return servers_removed
 
     def print_hash_map(self):
         self.lock.acquire_reader()

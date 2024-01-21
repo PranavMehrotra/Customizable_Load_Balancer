@@ -51,7 +51,7 @@ async def heartbeat(request):
 async def not_found(request):
     # Print when a request for an unknown endpoint is received
     print(f"Received Not Found Request at {datetime.datetime.now()}")
-    return web.Response(text="Not Found", status=404)
+    return web.Response(text="Not Found", status=400)  # Return a 400 Bad Request response
 
 def run_server():
     app = web.Application()
