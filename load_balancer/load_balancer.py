@@ -6,6 +6,7 @@ import sys
 import os
 import json
 import random
+import time
 
 # add the path to the parent directory to the sys.path list
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -17,16 +18,16 @@ from utils import generate_new_hostname
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
 class LoadBalancer:
-    def __init__(self, port=None):
+    def __init__(self):
         
-        self.port = port
         # self.servers = {} # dictionary of active servers (key: hostname, value: port)
         self.servers = set() # set of active servers, no need to store port number, as it is always 5000
         self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers set
         self.socket = None
         
+        initial_servers = ['server1', 'server2', 'server3', 'server4']
         # spawn the initial set of servers
-        for hostname in ['server1', 'server2', 'server3']:
+        for hostname in initial_servers:
             done = spawn_server_cntnr(hostname)
             if not done:
                 print("<Error> Server: '" + hostname + "' could not be spawned!")
@@ -35,8 +36,9 @@ class LoadBalancer:
             # self.servers[hostname] = port
             self.servers.add(hostname)
             self.rw_lock.release_writer()
+            time.sleep(1)
         
-        self.consistent_hashing = ConsistentHashing(server_hostnames=['server1', 'server2', 'server3'])
+        self.consistent_hashing = ConsistentHashing(server_hostnames=initial_servers)
 
     def add_servers(self, num_add, hostnames:list):
         error=""
@@ -49,9 +51,11 @@ class LoadBalancer:
             return -1, [], error
             
         else:
+            print("Hello1", flush=True)
             # add the servers whose hostnames are provided, to the set
             for hostname in hostnames:
                 self.rw_lock.acquire_reader()
+                print("Hello2", flush=True)
                 if (hostname in self.servers):
                     print("<Error> Hostname: '" + hostname + "' already exists in the active list of servers!") 
                     self.rw_lock.release_reader()
@@ -63,6 +67,7 @@ class LoadBalancer:
             for i in range(num_add - len(temp_new_servers)):
                 new_hostname = generate_new_hostname()
                 self.rw_lock.acquire_reader()
+                print("Hello3", flush=True)
                 while (new_hostname in self.servers or new_hostname in temp_new_servers):
                     new_hostname = generate_new_hostname()
                 self.rw_lock.release_reader()
@@ -72,14 +77,16 @@ class LoadBalancer:
         
         ### TO-D0: Call the server spawning module to spawn the new servers:
         for server in temp_new_servers:
-            print("Spawning server: " + server)
+            print("Spawning server: " + server, flush=True)
             done = spawn_server_cntnr(server) ## function from docker_utils.py
+            print("Done: " + str(done), flush=True)
             ### TO-DO: Add error handling here in case the server could not be spawned
             if not done:
                 print("<Error> Server: '" + server + "' could not be spawned!")
 
             else:     # add the newly spawned server to the dictionary of servers
                 final_add_server_set.add(server)
+            time.sleep(1)
             
         
           

@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from RWLock import RWLock
 
 class ConsistentHashing:
-    def __init__(self, server_hostnames: list, num_servers=3, num_replicas=9, num_slots=512):
+    def __init__(self, server_hostnames: list, num_servers=4, num_replicas=9, num_slots=512):
         if len(server_hostnames) < num_servers:
             print("Number of servers is greater than number of server hostnames provided")
             return
