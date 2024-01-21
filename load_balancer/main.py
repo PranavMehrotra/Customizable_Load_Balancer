@@ -2,20 +2,20 @@ import sys
 import time
 import os
 # import threading
-import asyncio
+# import asyncio
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # from consistent_hashing import consistent_hashing
 # from server import server
 # from load_balancer import load_balancer
 # from heartbeat import check_heartbeat
-from load_balancer import client_handler
-import aiohttp
-import asyncio
+import client_handler
+# import aiohttp
+# import asyncio
 
 
 if __name__ == "__main__":
-    asyncio.run(client_handler.run_load_balancer())
+    client_handler.run_load_balancer()
     # Lb = load_balancer.LoadBalancer()
     # Lb.add_servers(2, ['server1', 'server2'])
     # t1 = threading.Thread(target=asyncio.run(check_heartbeat(Lb, 'server1')), args=[])

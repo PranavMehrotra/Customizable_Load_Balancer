@@ -11,12 +11,12 @@ RUN apt-get install -y python3-pip
 
 
 RUN pip install -r requirements.txt
-RUN chmod +x test.py
+RUN chmod +x main.py
 
-RUN apt-get update
+# RUN apt-get update
 RUN apt-get -y install sudo
 
-RUN apt-get update
+# RUN apt-get update
 RUN apt-get install ca-certificates curl gnupg
 RUN install -m 0755 -d /etc/apt/keyrings
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -42,4 +42,4 @@ USER $USER
 
 ENV HOME=/home/$USER
 
-CMD ["python", "test.py"]
+CMD ["python", "main.py"]

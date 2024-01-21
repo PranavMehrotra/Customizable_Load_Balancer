@@ -9,8 +9,10 @@ import random
 
 # add the path to the parent directory to the sys.path list
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from consistent_hashing.RWLock import RWLock
-from consistent_hashing import consistent_hashing
+# from ..consistent_hashing import RWLock
+# from ..consistent_hashing import consistent_hashing
+from RWLock import RWLock
+from consistent_hashing import ConsistentHashing
 from utils import generate_new_hostname
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
@@ -34,7 +36,7 @@ class LoadBalancer:
             self.servers.add(hostname)
             self.rw_lock.release_writer()
         
-        self.consistent_hashing = consistent_hashing.ConsistentHashing(server_hostnames=['server1', 'server2', 'server3'])
+        self.consistent_hashing = ConsistentHashing(server_hostnames=['server1', 'server2', 'server3'])
 
     def add_servers(self, num_add, hostnames:list):
         error=""
@@ -84,7 +86,7 @@ class LoadBalancer:
         # send the temorary list of new servers to be added to the consistent hashing module
         # the consistent hasing module will finally return the list of servers that were finally added
         new_servers = self.consistent_hashing.add_servers(list(final_add_server_set))
-        
+        new_servers = set(new_servers)
 
         # # add the newly added servers to the dictionary of servers
         self.rw_lock.acquire_writer()

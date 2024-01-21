@@ -5,12 +5,12 @@ import os
 import requests
 import concurrent.futures
 import time
-import aiohttp
-import asyncio
+# import aiohttp
+import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from load_balancer.load_balancer import LoadBalancer
+from load_balancer import LoadBalancer
 
 class HeartBeat(threading.Thread):
     def __init__(self, lb: LoadBalancer, server_name, server_port=5000):
@@ -26,7 +26,7 @@ class HeartBeat(threading.Thread):
     def stopped(self):
         return self._stop_event.is_set()
 
-    async def run(self):
+    def run(self):
         lb = self._lb
         server_name = self._server_name
         server_port = self._server_port
@@ -39,68 +39,69 @@ class HeartBeat(threading.Thread):
                 print("Stopping heartbeat thread for server: ", server_name)
                 return
             # print("Starting a session!")
-            async with aiohttp.ClientSession() as session:
-                print("Session started!")
+            # with aiohttp.ClientSession() as session:
+            # print("Session started!")
+            
+            try:
+                # with session.get(f'http://{server_name}:{server_port}/heartbeat') as response:
+                    # print("Connected to server, Response received!")
+                    # if response.status != 200 and {await response.text()}['message'] != "ok":
+                    
+                    ## To-Do: Check for timeout also
+                response = requests.get(f'http://{server_name}:{server_port}/heartbeat')
+                if response.status_code != 200 and response.status_code != 400:
+                    cntr += 1
+                    if cntr >= 2:
+                        # Check if the thread is stopped
+                        if self.stopped():
+                            print("Stopping heartbeat thread for server: ", server_name)
+                            # session.close()
+                            return
+                        print(f"Server {server_name} is down!")
+                        print(f"Spawning a new server: {server_name}!")
+                        cntr = 0
+                        
+                        #remove server from
+                        lb.remove_servers(1, [server_name])
+                        
+                        # reinstantiate an image of the server
+                        lb.add_servers(1, [server_name])
+                        
+                        # print("Closing session!")
+                        # await session.close()
+                        
+                        # break
+                else :
+                    cntr = 0
+
+            # except aiohttp.client_exceptions.ClientConnectorError as e:
+            except Exception as e: # this is better as it is more generic and will catch all exceptions
+                print(f"Could not connect to server {server_name} due to {str(e.__class__.__name__)}")
+                print(f"Error: {e}")
+                cntr = 0 
+                # Check if the thread is stopped
+                if self.stopped():
+                    print("Stopping heartbeat thread for server: ", server_name)
+                    # session.close()
+                    return
+                print(f"Server {server_name} is down!")
+                print(f"Spawning a new server: {server_name}!")
+                #remove server from
+                num_rem, servers_rem, error = lb.remove_servers(1, [server_name])
+                print(f"Removed {num_rem} servers: {servers_rem}")
                 
-                try:
-                    async with session.get(f'http://{server_name}:{server_port}/heartbeat') as response:
-                        # print("Connected to server, Response received!")
-                        # if response.status != 200 and {await response.text()}['message'] != "ok":
-                        
-                        ## To-Do: Check for timeout also
-                        
-                        if response.status != 200 and response.status != 400:
-                            cntr += 1
-                            if cntr >= 2:
-                                # Check if the thread is stopped
-                                if self.stopped():
-                                    print("Stopping heartbeat thread for server: ", server_name)
-                                    await session.close()
-                                    return
-                                print(f"Server {server_name} is down!")
-                                print(f"Spawning a new server: {server_name}!")
-                                cntr = 0
-                                
-                                #remove server from
-                                lb.remove_servers(1, [server_name])
-                                
-                                # reinstantiate an image of the server
-                                lb.add_servers(1, [server_name])
-                                
-                                # print("Closing session!")
-                                # await session.close()
-                                
-                                # break
-                        else :
-                            cntr = 0
+                # reinstantiate an image of the server
+                num_add, servers_add, error = lb.add_servers(1, [server_name])
+                print(f"Added {num_add} servers: {servers_add}")
+                
+                # await session.close()
+                # print("Closing session!")
+                
+                # break
 
-                # except aiohttp.client_exceptions.ClientConnectorError as e:
-                except Exception as e: # this is better as it is more generic and will catch all exceptions
-                    print(f"Could not connect to server {server_name} due to {str(e.__class__.__name__)}")
-                    cntr = 0 
-                    # Check if the thread is stopped
-                    if self.stopped():
-                        print("Stopping heartbeat thread for server: ", server_name)
-                        await session.close()
-                        return
-                    print(f"Server {server_name} is down!")
-                    print(f"Spawning a new server: {server_name}!")
-                    #remove server from
-                    num_rem, servers_rem, error = lb.remove_servers(1, [server_name])
-                    print(f"Removed {num_rem} servers: {servers_rem}")
-                    
-                    # reinstantiate an image of the server
-                    num_add, servers_add, error = lb.add_servers(1, [server_name])
-                    print(f"Added {num_add} servers: {servers_add}")
-                    
-                    # await session.close()
-                    # print("Closing session!")
-                    
-                    # break
-
-            print("Closing session and sleeping!")
-            await session.close()
-            await asyncio.sleep(0.2)
+            # print("Closing session and sleeping!")
+            # session.close()
+            time.sleep(0.2)
 
 # async def check_heartbeat(Lb, server_name, server_ip="127.0.0.1", server_port=5000):
 #     print("Heartbeat thread started for server: ", server_name)

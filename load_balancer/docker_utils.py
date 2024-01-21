@@ -3,7 +3,7 @@ import os
 def spawn_server_cntnr(hostname):
     try:
         # Spawn a new container with the environment variable
-        res = os.popen(f'sudo docker run --name {hostname} --network mynet --network-alias {hostname} -e hostname={hostname} -d server_img:latest').read()
+        res = os.popen(f'sudo docker run --name {hostname} --network mynet --network-alias {hostname} -e SERVER_ID={hostname} -d server_img:latest').read()
         
         if len(res) == 0:
             print(f"Error: Unable to start container with ID {hostname}.")
