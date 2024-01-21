@@ -3,7 +3,7 @@
 import aiohttp
 import asyncio
 import datetime
-
+import requests
 async def send_requests_a():
     t = 10
     async with aiohttp.ClientSession() as session:
@@ -11,8 +11,19 @@ async def send_requests_a():
             t-=1
             current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"Client A - Sending Home Request at: {current_time}")
-            async with session.get('http://127.0.0.1:5000/hsome') as response:
+            async with session.get('http://127.0.0.1:5000/home') as response:
+                test = await response.json()
+                status = response.status
+                print(f"{test} {status}")
                 print(f"Client A - Home Request Response: {await response.text()}")
+
+    # # Use the requests library to send a request to the server
+    # while t>0:
+    #     t-=1
+    #     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #     print(f"Client A - Sending Home Request at: {current_time}")
+    #     response = await requests.get('http://127.0.0.1:5000/home')
+    #     print(f"Client A - Home Request Response: {response.json()}")
 
         # await asyncio.sleep(2)  # Sleep for 2 seconds between requests
 

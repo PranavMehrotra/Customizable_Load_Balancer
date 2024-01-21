@@ -206,7 +206,15 @@ class LoadBalancer:
         self.rw_lock.release_reader()
         return servers_list           
         
-        
+    def assign_server(self, req_id):
+        self.rw_lock.acquire_reader()
+        if (len(self.servers) == 0):
+            print("<Error> No active server left. Can't assign any server!")
+            self.rw_lock.release_reader()
+            return ""
+        server = self.consistent_hashing.get_server(req_id)
+        self.rw_lock.release_reader()
+        return server
                 
         
         
