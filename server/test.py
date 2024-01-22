@@ -1,4 +1,4 @@
-#to check if concurrent home and heartbeat requests can be handled. monitor timing on both server side and client side 
+#to test server(without docker) api functions 
 
 import aiohttp
 import asyncio
@@ -17,15 +17,6 @@ async def send_requests_a():
                 print(f"{test} {status}")
                 print(f"Client A - Home Request Response: {await response.text()}")
 
-    # # Use the requests library to send a request to the server
-    # while t>0:
-    #     t-=1
-    #     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    #     print(f"Client A - Sending Home Request at: {current_time}")
-    #     response = await requests.get('http://127.0.0.1:5000/home')
-    #     print(f"Client A - Home Request Response: {response.json()}")
-
-        # await asyncio.sleep(2)  # Sleep for 2 seconds between requests
 
 if __name__ == '__main__':
     asyncio.run(send_requests_a())

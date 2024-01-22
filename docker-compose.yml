@@ -3,7 +3,7 @@ version: '3.9'
 services:
 
   load_balancer:
-    build: load_balancer/ # Path to the Dockerfile for the client
+    build: load_balancer/ 
     image: load_balancer_img
     container_name: load_balancer_con
     ports:
@@ -15,24 +15,6 @@ services:
       network1:
         aliases:
           - load_balancer
-
-  # server:
-  #   build: server/
-  #   image: server_img
-  #   container_name: daemon_server  # This is not needed as docker-compose will create a unique name for each container
-  #   ports:
-  #   # host:container port mapping
-  #   # fixing host port makes it same for all containers, causing conflicts, hence not specified
-  #     - "5000"  # What does 5000:5000 in assignment mean?
-  #   networks:
-  #     network1:
-  #       aliases:
-  #         - daemon_server
-  #   # removed this since server.py sets server name based on SERVER_ID env variable, so all servers respond with the same name
-  #   environment:
-  #     SERVER_ID: daemon_server
-  #   # deploy:
-  #   #   replicas: 3 
 
 networks:
   network1:
