@@ -17,6 +17,8 @@ from consistent_hashing import ConsistentHashing
 from utils import generate_new_hostname
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
 
+SLEEP_AFTER_SERVER_ADDITION = 1
+
 class LoadBalancer:
     def __init__(self):
         
@@ -30,15 +32,16 @@ class LoadBalancer:
         for hostname in initial_servers:
             done = spawn_server_cntnr(hostname)
             if not done:
-                print("<Error> Server: '" + hostname + "' could not be spawned!")
+                print("load_balancer: <Error> Server: '" + hostname + "' could not be spawned!")
                 return
             self.rw_lock.acquire_writer()
             # self.servers[hostname] = port
             self.servers.add(hostname)
             self.rw_lock.release_writer()
-            time.sleep(1)
+            time.sleep(SLEEP_AFTER_SERVER_ADDITION)
         
-        self.consistent_hashing = ConsistentHashing(server_hostnames=initial_servers)
+        
+        self.consistent_hashing = ConsistentHashing(server_hostnames=initial_servers, num_servers=len(initial_servers))
 
     def add_servers(self, num_add, hostnames:list):
         error=""
@@ -46,18 +49,16 @@ class LoadBalancer:
         # Make hostnames list unique(basically a set)
         hostnames = set(hostnames)
         if (len(hostnames) > num_add):
-            print("<Error> Length of hostname list is more than newly added instances")
+            print("load_balancer: <Error> Length of hostname list is more than newly added instances")
             error = "<Error> Length of hostname list is more than newly added instances"
             return -1, [], error
             
         else:
-            print("Hello1", flush=True)
             # add the servers whose hostnames are provided, to the set
             for hostname in hostnames:
                 self.rw_lock.acquire_reader()
-                print("Hello2", flush=True)
                 if (hostname in self.servers):
-                    print("<Error> Hostname: '" + hostname + "' already exists in the active list of servers!") 
+                    print("load_balancer: <Error> Hostname: '" + hostname + "' already exists in the active list of servers!") 
                     self.rw_lock.release_reader()
                     continue
                 self.rw_lock.release_reader()
@@ -67,7 +68,6 @@ class LoadBalancer:
             for i in range(num_add - len(temp_new_servers)):
                 new_hostname = generate_new_hostname()
                 self.rw_lock.acquire_reader()
-                print("Hello3", flush=True)
                 while (new_hostname in self.servers or new_hostname in temp_new_servers):
                     new_hostname = generate_new_hostname()
                 self.rw_lock.release_reader()
@@ -77,16 +77,15 @@ class LoadBalancer:
         
         ### TO-D0: Call the server spawning module to spawn the new servers:
         for server in temp_new_servers:
-            print("Spawning server: " + server, flush=True)
             done = spawn_server_cntnr(server) ## function from docker_utils.py
-            print("Done: " + str(done), flush=True)
             ### TO-DO: Add error handling here in case the server could not be spawned
             if not done:
-                print("<Error> Server: '" + server + "' could not be spawned!")
+                print("load_balancer: <Error> Server: '" + server + "' could not be spawned!")
 
             else:     # add the newly spawned server to the dictionary of servers
                 final_add_server_set.add(server)
-            time.sleep(1)
+
+            time.sleep(SLEEP_AFTER_SERVER_ADDITION)
             
         
           
@@ -115,12 +114,12 @@ class LoadBalancer:
         error = ""
         self.rw_lock.acquire_reader()
         if (len(self.servers) == 0):
-            print("<Error> No servers to remove!")
+            print("load_balancer: <Error> No servers to remove!")
             self.rw_lock.release_reader()
             error = "<Error> No servers to remove!"
             return -1, [], error
         if (num_rem > len(self.servers)):
-            print("<Error> Number of servers to remove is more than the number of active servers!")
+            print("load_balancer: <Error> Number of servers to remove is more than the number of active servers!")
             self.rw_lock.release_reader()
             error = "<Error> Number of servers to remove is more than the number of active servers!"
             return -1, [], error
@@ -130,14 +129,14 @@ class LoadBalancer:
         # Make hostname list unique(basically a set)
         hostnames = set(hostnames)
         if (len(hostnames) > num_rem):
-            print("<Error> Length of hostname list is more than removable instances")
+            print("load_balancer: <Error> Length of hostname list is more than removable instances")
             error = "<Error> Length of hostname list is more than removable instances"
             return -1, [], error
         else:
             for hostname in hostnames:
                 self.rw_lock.acquire_reader()
                 if (hostname not in self.servers):
-                    print("<Error> Hostname: '" + hostname + "' does not exist in the active list of servers!")    
+                    print("load_balancer: <Error> Hostname: '" + hostname + "' does not exist in the active list of servers!")    
                 else:
                     # temp_rm_servers[hostname] = 1
                     temp_rm_servers.add(hostname)          ## FASTER
@@ -148,7 +147,7 @@ class LoadBalancer:
             # for i in range(num_rem - len(hostnames)):
             #     self.rw_lock.acquire_reader()
             #     if (len(self.servers) == 0):
-            #         print("<Error> No active server left. Can't remove any more servers!")
+            #         print("load_balancer: <Error> No active server left. Can't remove any more servers!")
             #         # error = "<Error> No active server left. Can't remove any more servers!"
             #         self.rw_lock.release_reader()
             #         break
@@ -171,7 +170,9 @@ class LoadBalancer:
                     # tem_set = set(self.servers.keys()) - temp_rm_servers
                     tem_set = self.servers - temp_rm_servers
                     # Extend the list of servers to be removed with randomly selected servers
-                    temp_rm_servers = temp_rm_servers.union(random.sample(tem_set, left))  # This random.sample can also be removed, just take the first 'left' no. of servers :)
+
+                    # temp_rm_servers = temp_rm_servers.union(random.sample(tem_set, left))  # This random.sample can also be removed, just take the first 'left' no. of servers :)
+                    temp_rm_servers = temp_rm_servers.union(set(list(tem_set)[:left]))
                 self.rw_lock.release_reader()
                 
             
@@ -184,7 +185,7 @@ class LoadBalancer:
         #     if (server in servers_dne): # this is for the case when server got down before it could be removed
         #         # assert(server not in self.servers)
         #         if (server in self.servers): # this should never happen
-        #             print("<Error> This shoudn't happen! Server should have already been removed!")
+        #             print("load_balancer: <Error> This shoudn't happen! Server should have already been removed!")
         #             self.servers.pop(server)
         #     else:
         #         self.servers.pop(server)
@@ -197,9 +198,9 @@ class LoadBalancer:
             try:
                 # self.servers.pop(server)
                 self.servers.remove(server)
-                # print("Server: " + server + " removed!")
+                # print("load_balancer: Server: " + server + " removed!")
             except KeyError:
-                print("<Error> Server: '" + server + "' does not exist in the active list of servers!")
+                print("load_balancer: <Error> Server: '" + server + "' does not exist in the active list of servers!")
                 continue
         self.rw_lock.release_writer()
         
@@ -218,8 +219,8 @@ class LoadBalancer:
     def assign_server(self, req_id):
         self.rw_lock.acquire_reader()
         if (len(self.servers) == 0):
-            print("<Error> No active server left. Can't assign any server!")
             self.rw_lock.release_reader()
+            print("load_balancer: <Error> No active server left. Can't assign any server!")
             return ""
         server = self.consistent_hashing.get_server(req_id)
         self.rw_lock.release_reader()

@@ -24,7 +24,7 @@ async def home(request):
     # Assign a server to the request using the load balancer
     server = lb.assign_server(req_id)
 
-    print(f"Request {req_id} assigned to server: {server}", flush=True)
+    print(f"client_handler: Request {req_id} assigned to server: {server}", flush=True)
 
     try:
         # Send the request to the server and get the response, use aiohttp
@@ -51,17 +51,23 @@ async def home(request):
 async def add_server_handler(request):
     global lb
     global hb_threads
-    print("Hello", flush=True)
-    # Get a payload json from the request
-    payload = await request.text()
-    print(payload, flush=True)
-    # Get the number of servers to be added
-    # num_servers = payload['n']
-    num_servers = 3
-    # Get the list of preferred hostnames
-    # pref_hosts = payload['hostnames']
-    pref_hosts = ['pranav']
-    print("Hello5", flush=True)
+    try:
+        # Get a payload json from the request
+        payload = await request.json()
+        print(payload, flush=True)
+        # Get the number of servers to be added
+        num_servers = int(payload['n'])
+        # num_servers = 3
+        # Get the list of preferred hostnames
+        pref_hosts = list(payload['hostnames'])
+        # pref_hosts = ['pranav']
+        print(f"client_handler: Received Request to add N: {num_servers} servers, Hostnames: {pref_hosts}", flush=True)
+    except:
+        response_json = {
+            "message": f"<Error> Invalid payload format",
+            "status": "failure"
+        }
+        return web.json_response(response_json, status=400)
     if num_servers<=0:
         response_json = {
             "message": f"<Error> Invalid number of servers to be added: {num_servers}",
@@ -79,10 +85,10 @@ async def add_server_handler(request):
         }
         return web.json_response(response_json, status=400)
 
-    print(f"Added {num_added} servers to the system")
-    print(f"Added Servers: {added_servers}", flush=True)
+    print(f"client_handler: Added {num_added} servers to the system")
+    print(f"client_handler: Added Servers: {added_servers}", flush=True)
     if err!="":
-        print(f"Error: {err}")
+        print(f"client_handler: Error: {err}")
 
     # Spawn the heartbeat threads for the added servers
     for server in added_servers:
@@ -107,16 +113,25 @@ async def add_server_handler(request):
 async def remove_server_handler(request):
     global lb
     global hb_threads
-    # Get a payload json from the request
-    # payload = await request.json()
-    payload = await request.text()
-    print(payload, flush=True)
-    # Get the number of servers to be removed
-    # num_servers = payload['n']
-    num_servers = 3
-    # Get the list of preferred hostnames
-    # pref_hosts = payload['hostnames']
-    pref_hosts = ['pranav']
+
+    try:
+        # Get a payload json from the request
+        payload = await request.json()
+        # payload = await request.text()
+        print(payload, flush=True)
+        # Get the number of servers to be removed
+        num_servers = int(payload['n'])
+        # num_servers = 3
+        # Get the list of preferred hostnames
+        pref_hosts = list(payload['hostnames'])
+        # pref_hosts = ['pranav']
+        print(f"client_handler: Received Request to remove N: {num_servers} servers, Hostnames: {pref_hosts}", flush=True)
+    except:
+        response_json = {
+            "message": f"<Error> Invalid payload format",
+            "status": "failure"
+        }
+        return web.json_response(response_json, status=400)
 
     if num_servers<=0:
         response_json = {
@@ -135,10 +150,10 @@ async def remove_server_handler(request):
         }
         return web.json_response(response_json, status=400)
     
-    print(f"Removed {num_removed} servers from the system")
-    print(f"Removed Servers: {removed_servers}", flush=True)
+    print(f"client_handler: Removed {num_removed} servers from the system")
+    print(f"client_handler: Removed Servers: {removed_servers}", flush=True)
     if err!="":
-        print(f"Error: {err}")
+        print(f"client_handler: Error: {err}")
 
     # Kill the heartbeat threads for the removed servers
     for server in removed_servers:
@@ -160,7 +175,7 @@ async def remove_server_handler(request):
 
 async def rep_handler(request):
     global lb
-    print(f"Received Replicas Request")
+    print(f"client_handler: Received Request to list all servers", flush=True)
     # return a list of all the current servers
     server_list = lb.list_servers()
     response_json = {
@@ -174,7 +189,7 @@ async def rep_handler(request):
 
 async def not_found(request):
     global lb
-    print(f"Invalid Request Received", flush=True)
+    print(f"client_handler: Invalid Request Received: {request.rel_url}", flush=True)
     response_json = {
         "message": f"<Error> '{request.rel_url}' endpoint does not exist in server replicas",
         "status": "failure"
@@ -187,7 +202,7 @@ def run_load_balancer():
     global hb_threads
     lb = LoadBalancer()
     tem_servers = lb.list_servers()
-    print(tem_servers)
+    # print(tem_servers)
     for server in tem_servers:
         hb_threads[server] = HeartBeat(lb, server)
         hb_threads[server].start()

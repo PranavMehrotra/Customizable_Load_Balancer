@@ -10,7 +10,7 @@ from RWLock import RWLock
 class ConsistentHashing:
     def __init__(self, server_hostnames: list, num_servers=4, num_replicas=9, num_slots=512):
         if len(server_hostnames) < num_servers:
-            print("Number of servers is greater than number of server hostnames provided")
+            print("consistent_hashing: Number of servers is greater than number of server hostnames provided")
             return
         self.num_servers = num_servers
         self.num_replicas = num_replicas
@@ -30,7 +30,7 @@ class ConsistentHashing:
         for i in range(self.num_servers):
             # Check if server already exists
             if server_hostnames[i] in self.hostname_to_id:
-                print(f"Server {server_hostnames[i]} already exists")
+                print(f"consistent_hashing: Server {server_hostnames[i]} already exists")
                 continue
             self.hostname_to_id[server_hostnames[i]] = self.next_server_id
             self.id_to_hostname[self.next_server_id] = server_hostnames[i]
@@ -49,13 +49,13 @@ class ConsistentHashing:
         hash = (server_id*server_id) % self.num_slots
         hash += (replica_id*replica_id) % self.num_slots
         hash += (2*replica_id + 25) % self.num_slots
-        print(f"Server: {server_id}, Replica: {replica_id}, Hash: {hash}")
+        # print(f"consistent_hashing: Server: {server_id}, Replica: {replica_id}, Hash: {hash}")
         return hash % self.num_slots
     
     def request_hash_func(self, request_id):
         hash = (request_id*request_id) % self.num_slots
         hash += (2*request_id + 17) % self.num_slots
-        print(f"Request: {request_id}, Hash: {hash}")
+        print(f"consistent_hashing: Request: {request_id}, Hash: {hash}")
         return hash % self.num_slots
     
     def get_server(self, request_id):
@@ -67,40 +67,40 @@ class ConsistentHashing:
     
     def linear_probing(self, replica_hash):
         i = replica_hash
-        if self.hash_array[i] != 0:
-            print(f"Collision while adding at hash {replica_hash}, performing linear probing")
+        # if self.hash_array[i] != 0:
+        #     print(f"consistent_hashing: Collision while adding at hash {replica_hash}, performing linear probing")
         while self.hash_array[i] != 0:
             i = (i+1) % self.num_slots
             if i == replica_hash:
                 # Should never happen
-                BufferError("No more slots available")
+                BufferError("consistent_hashing: No more slots available")
                 return
-        if i != replica_hash:
-            print(f"Linear probing completed at hash {i}")
+        # if i != replica_hash:
+        #     print(f"consistent_hashing: Linear probing completed at hash {i}")
         return i
 
     def linear_probing_delete(self, replica_hash, server_id):
         i = replica_hash
-        if self.hash_array[i] != server_id:
-            print(f"Collision while removing at hash {replica_hash}, performing linear probing")
+        # if self.hash_array[i] != server_id:
+        #     print(f"consistent_hashing: Collision while removing at hash {replica_hash}, performing linear probing")
         while self.hash_array[i] != server_id:
             i = (i+1) % self.num_slots
             if i == replica_hash:
                 # Should never happen
-                BufferError(f"Replica does not exist of server {server_id}")
+                BufferError(f"consistent_hashing: Replica does not exist of server {server_id}")
                 return
-        if i != replica_hash:
-            print(f"Linear probing completed at hash {i}")
+        # if i != replica_hash:
+        #     print(f"consistent_hashing: Linear probing completed at hash {i}")
         return i
 
     def add_server(self, server_hostname):
         if self.num_virtual_servers + self.num_replicas > self.num_slots:
-            print("No more servers can be added, all slots are full")
+            print("consistent_hashing: No more servers can be added, all slots are full")
             return
         self.lock.acquire_writer()
         # Check if server already exists
         if server_hostname in self.hostname_to_id:
-            print(f"Server {server_hostname} already exists")
+            print(f"consistent_hashing: Server {server_hostname} already exists")
             self.lock.release_writer()
             return
         server_id = self.next_server_id
@@ -123,18 +123,18 @@ class ConsistentHashing:
         # new_server_ctr = 0
         
         if len(server_hostnames) == 0:
-            print("No servers to add")
+            print("consistent_hashing: No servers to add")
             return []
         self.lock.acquire_writer()
         for server_hostname in server_hostnames:
             # Check if slots are available
             if self.num_virtual_servers + self.num_replicas > self.num_slots:
-                print("No more servers can be added, all slots are full")
+                print("consistent_hashing: No more servers can be added, all slots are full")
                 self.lock.release_writer()
                 return []
             # Check if server already exists
             if server_hostname in self.hostname_to_id:
-                print(f"Server {server_hostname} already exists")
+                print(f"consistent_hashing: Server {server_hostname} already exists")
                 continue
             server_id = self.next_server_id
             self.next_server_id += 1
@@ -159,7 +159,7 @@ class ConsistentHashing:
         self.lock.acquire_writer()
         # Check if server exists
         if server_hostname not in self.hostname_to_id:
-            print(f"Server {server_hostname} does not exist")
+            print(f"consistent_hashing: Server {server_hostname} does not exist")
             self.lock.release_writer()
             return []
         server_id = self.hostname_to_id[server_hostname]
@@ -173,7 +173,7 @@ class ConsistentHashing:
             if idx >= len(self.hash_map) or self.hash_map[idx] != replica_hash:
                 # Should never happen
                 self.lock.release_writer()
-                BufferError(f"Replica {i} of server {server_id} does not exist")
+                BufferError(f"consistent_hashing: Replica {i} of server {server_id} does not exist")
             del self.hash_map[idx]
             self.num_virtual_servers -= 1
         self.num_servers -= 1
@@ -182,7 +182,7 @@ class ConsistentHashing:
 
     def remove_servers(self, server_hostnames: list):
         if len(server_hostnames) == 0:
-            print("No servers to remove")
+            print("consistent_hashing: No servers to remove")
             return []
         
         servers_removed = []
@@ -191,7 +191,7 @@ class ConsistentHashing:
         for server_hostname in server_hostnames:
             # Check if server exists
             if server_hostname not in self.hostname_to_id:
-                print(f"Server {server_hostname} does not exist")
+                print(f"consistent_hashing: Server {server_hostname} does not exist")
                 continue
             server_id = self.hostname_to_id[server_hostname]
             del self.hostname_to_id[server_hostname]
@@ -204,7 +204,7 @@ class ConsistentHashing:
                 if idx >= len(self.hash_map) or self.hash_map[idx] != replica_hash:
                     # Should never happen
                     self.lock.release_writer()
-                    BufferError(f"Replica {i} of server {server_id} does not exist")
+                    BufferError(f"consistent_hashing: Replica {i} of server {server_id} does not exist")
                 del self.hash_map[idx]
                 self.num_virtual_servers -= 1
             self.num_servers -= 1
@@ -216,24 +216,24 @@ class ConsistentHashing:
 
     def print_hash_map(self):
         self.lock.acquire_reader()
-        print(f"Number of virtual servers: {self.num_virtual_servers}\nHash map: ", end="")
+        print(f"consistent_hashing: Number of virtual servers: {self.num_virtual_servers}\nHash map: ", end="")
         print(self.hash_map)
         # print(self.hash_array)
         self.lock.release_reader()
 
     def __unique_checker(self):
         # Check if sorted list is unique
-        print("Checking uniqueness of hash map: ", end="")
+        print("consistent_hashing: Checking uniqueness of hash map: ", end="")
         self.lock.acquire_reader()
         for i in range(len(self.hash_map)-1):
             if self.hash_map[i] == self.hash_map[i+1]:
-                print("Not unique")
-                print(f"Duplicate: {self.hash_map[i]} at index {i} and {i+1}")
+                print("consistent_hashing: Not unique")
+                print(f"consistent_hashing: Duplicate: {self.hash_map[i]} at index {i} and {i+1}")
                 print(self.hash_map)
                 self.lock.release_reader()
                 exit()
         self.lock.release_reader()
-        print("Unique")
+        print("consistent_hashing: Unique")
 
 
 if __name__ == "__main__":
