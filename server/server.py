@@ -18,17 +18,13 @@ def generate_random_string(length):
 # Define an asynchronous function for handling the home endpoint
 async def home(request):
     try:
-        # Print when the request is received
-        print(f"Received Home Request at {datetime.datetime.now()}")
-
+        
         # Prepare response data
         response_data = {
             "message": f"Hello from Server: {server_id}",
             "status": "successful"
         }
 
-        # Print when the response is generated
-        print(f"Generated Home Response at {datetime.datetime.now()}")
         # Return a JSON response with a 200 OK status and Cache-Control header
         return web.json_response(response_data, status=200, headers={"Cache-Control": "no-store"})
     
@@ -40,11 +36,6 @@ async def home(request):
 # Define an asynchronous function for handling the heartbeat endpoint
 async def heartbeat(request):
     try:
-        # Print when the request is received
-        print(f"Received Heartbeat Request at {datetime.datetime.now()}")
-
-        # Print when the response is generated
-        print(f"Generated Heartbeat Response at {datetime.datetime.now()}")
         # Return a simple 200 OK response
         return web.Response(status=200)
     
@@ -55,8 +46,6 @@ async def heartbeat(request):
 
 # Define a synchronous function for handling requests to unknown endpoints
 async def not_found(request):
-    # Print when a request for an unknown endpoint is received
-    print(f"Received Not Found Request at {datetime.datetime.now()}")
     # Return a 400 Bad Request response with a plain text message
     return web.Response(text="Not Found", status=400)
 
