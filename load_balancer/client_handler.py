@@ -24,16 +24,27 @@ async def home(request):
 
     # Assign a server to the request using the load balancer
     server = lb.assign_server(req_id)
-
+    if (server == ""):
+        # No servers available, return a failure response
+        response_json = {
+            "message": f"<Error> Cannot process request! No active servers!",
+            "status": "failure"
+        }
+        return web.json_response(response_json, status=400)
+    
     print(f"client_handler: Request {req_id} assigned to server: {server}", flush=True)
 
     try:
         # Send the request to the server and get the response, use aiohttp
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=0.5)) as session:
             async with session.get(f'http://{server}:{SERVER_PORT}/home') as response:
             # async with request.app['client_session'].get(f'http://{server}:{SERVER_PORT}/home') as response:
                 response_json = await response.json()
                 response_status = response.status
+                
+                # increment count of requests served by the server
+                lb.increment_server_req_count(server)
+                
                 # Return the response from the server
                 return web.json_response(response_json, status=response_status, headers={"Cache-Control": "no-store"})
         # async with request.app['client_session'].get(f'http://{server}:{SERVER_PORT}/home') as response:
@@ -58,10 +69,9 @@ async def add_server_handler(request):
         print(payload, flush=True)
         # Get the number of servers to be added
         num_servers = int(payload['n'])
-        # num_servers = 3
         # Get the list of preferred hostnames
         pref_hosts = list(payload['hostnames'])
-        # pref_hosts = ['pranav']
+        
         print(f"client_handler: Received Request to add N: {num_servers} servers, Hostnames: {pref_hosts}", flush=True)
     except:
         response_json = {
@@ -190,6 +200,17 @@ async def rep_handler(request):
     }
     return web.json_response(response_json, status=200)
 
+async def lb_analysis(request):
+    global lb
+    print(f"client_handler: Received Request to provide server load statistics", flush=True)
+    load_count = lb.get_server_load_stats()
+    response_json = {
+        "message": f"Server Load Statistics:",
+        "dict": load_count,
+        "status": "successful"
+    }
+    return web.json_response(response_json, status=200)
+
 async def not_found(request):
     global lb
     print(f"client_handler: Invalid Request Received: {request.rel_url}", flush=True)
@@ -218,6 +239,7 @@ def run_load_balancer():
     app.router.add_post('/add', add_server_handler)
     app.router.add_delete('/rm', remove_server_handler)
     app.router.add_get('/rep', rep_handler)
+    app.router.add_get('/lb_analysis', lb_analysis)
 
     app.router.add_route('*', '/{tail:.*}', not_found)
 
