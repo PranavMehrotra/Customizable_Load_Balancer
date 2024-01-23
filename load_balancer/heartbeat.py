@@ -33,7 +33,7 @@ class HeartBeat(threading.Thread):
         lb = self._lb
         server_name = self._server_name
         server_port = self._server_port
-        print("heartbeat: Heartbeat thread started for server: ", server_name)
+        print("heartbeat: Heartbeat thread started for server: ", server_name, flush=True)
         time.sleep(SEND_FIRST_HEARTBEAT_AFTER)
         cntr = 0
         while True:

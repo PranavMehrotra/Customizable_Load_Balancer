@@ -7,6 +7,7 @@ import os
 import json
 import random
 import time
+import datetime
 
 # add the path to the parent directory to the sys.path list
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -26,6 +27,8 @@ class LoadBalancer:
         self.servers = set() # set of active servers, no need to store port number, as it is always 5000
         self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers set
         self.socket = None
+        self.load_count = {}
+        self.load_cnt_lock = RWLock()
         
         # spawn the initial set of servers
         for hostname in initial_servers:
@@ -38,6 +41,7 @@ class LoadBalancer:
             self.servers.add(hostname)
             self.rw_lock.release_writer()
             # time.sleep(SLEEP_AFTER_SERVER_ADDITION)
+        
         
         
         self.consistent_hashing = ConsistentHashing(server_hostnames=initial_servers, num_servers=len(initial_servers))
@@ -57,7 +61,7 @@ class LoadBalancer:
             for hostname in hostnames:
                 self.rw_lock.acquire_reader()
                 if (hostname in self.servers):
-                    print("load_balancer: <Error> Hostname: '" + hostname + "' already exists in the active list of servers!") 
+                    # print("load_balancer: <Error> Hostname: '" + hostname + "' already exists in the active list of servers!") 
                     self.rw_lock.release_reader()
                     continue
                 self.rw_lock.release_reader()
@@ -222,5 +226,45 @@ class LoadBalancer:
         self.rw_lock.release_reader()
         return server
                 
+    def increment_server_req_count(self, server):
+        self.load_cnt_lock.acquire_writer()
+        if (server in self.load_count):
+            self.load_count[server] += 1
+        else:
+            self.load_count[server] = 1
+        self.load_cnt_lock.release_writer()
+        
+    def get_server_load_stats(self):
+        self.load_cnt_lock.acquire_reader()
+        load_count = self.load_count.copy()
+        self.load_cnt_lock.release_reader()
+        return load_count
+    
+    # def save_lb_analysis_csv(self):
+    #     t = datetime.datetime.now()
+    #     time_save = t.strftime("%d_%m_%Y_%H_%M_") + str(t.second)
+    #     print(time_save)
+
+    #     # check if an analysis folder exists
+    #     if not os.path.exists("./lb_analysis"):
+    #         os.mkdir("./lb_analysis")
+    #     # save the csv file in the analysis folder
+
+    #     try:
+    #         self.load_cnt_lock.acquire_reader()
+    #         with open("./lb_analysis/lb_analysis_" + time_save + ".csv", "w") as f:
+    #             f.write("server,load\n")
+    #             for server in self.load_count:
+    #                 f.write(server + "," + str(self.load_count[server]) + "\n")
+    #         self.load_cnt_lock.release_reader()
+            
+    #         return True
+    
+    #     except Exception as e:
+    #         print("load_balancer: <Error> Could not save the load balancer analysis csv file due to: " + str(e))
+    #         return False
+            
+        
+        
         
         
