@@ -8,6 +8,7 @@ from docker_utils import spawn_server_cntnr, kill_server_cntnr
 import aiohttp
 
 SERVER_PORT = 5000
+NUM_INITIAL_SERVERS = 3
 
 lb : LoadBalancer = ""
 hb_threads = {}
@@ -202,7 +203,9 @@ async def not_found(request):
 def run_load_balancer():
     global lb
     global hb_threads
-    initial_servers = ['server1', 'server2', 'server3']
+    initial_servers = []
+    for i in range(NUM_INITIAL_SERVERS):
+        initial_servers.append(f"server{i+1}")
     lb = LoadBalancer(initial_servers)
     tem_servers = lb.list_servers()
     # print(tem_servers)

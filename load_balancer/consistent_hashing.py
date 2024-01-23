@@ -7,6 +7,10 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from RWLock import RWLock
 
+INITIAL_SERVER_ID = 3742
+SERVER_ID_MULTIPLIER = 17
+REPLICA_ID_MULTIPLIER = 42
+
 class ConsistentHashing:
     def __init__(self, server_hostnames: list, num_servers=4, num_replicas=9, num_slots=512):
         if len(server_hostnames) < num_servers:
@@ -21,7 +25,7 @@ class ConsistentHashing:
         self.id_to_hostname = {}
         self.hostname_to_id = {}
         self.num_virtual_servers = 0
-        self.next_server_id = 1
+        self.next_server_id = INITIAL_SERVER_ID
         self.init_hash_map(server_hostnames)
 
     
@@ -35,7 +39,7 @@ class ConsistentHashing:
             self.hostname_to_id[server_hostnames[i]] = self.next_server_id
             self.id_to_hostname[self.next_server_id] = server_hostnames[i]
             for j in range(self.num_replicas):
-                replica_hash = self.server_hash_func(self.next_server_id, j)
+                replica_hash = self.server_hash_func(SERVER_ID_MULTIPLIER*self.next_server_id, REPLICA_ID_MULTIPLIER*j)
                 replica_hash = self.linear_probing(replica_hash)
                 self.hash_map.append(replica_hash)
                 self.hash_array[replica_hash] = self.next_server_id
@@ -108,7 +112,7 @@ class ConsistentHashing:
         self.id_to_hostname[server_id] = server_hostname
         self.hostname_to_id[server_hostname] = server_id
         for i in range(self.num_replicas):
-            replica_hash = self.server_hash_func(server_id, i)
+            replica_hash = self.server_hash_func(SERVER_ID_MULTIPLIER*server_id, REPLICA_ID_MULTIPLIER*i)
             replica_hash = self.linear_probing(replica_hash)
             bisect.insort(self.hash_map, replica_hash)
             self.hash_array[replica_hash] = server_id
@@ -141,7 +145,7 @@ class ConsistentHashing:
             self.id_to_hostname[server_id] = server_hostname
             self.hostname_to_id[server_hostname] = server_id
             for i in range(self.num_replicas):
-                replica_hash = self.server_hash_func(server_id, i)
+                replica_hash = self.server_hash_func(SERVER_ID_MULTIPLIER*server_id, REPLICA_ID_MULTIPLIER*i)
                 replica_hash = self.linear_probing(replica_hash)
                 bisect.insort(self.hash_map, replica_hash)
                 self.hash_array[replica_hash] = server_id
@@ -166,7 +170,7 @@ class ConsistentHashing:
         del self.hostname_to_id[server_hostname]
         del self.id_to_hostname[server_id]
         for i in range(self.num_replicas):
-            replica_hash = self.server_hash_func(server_id, i)
+            replica_hash = self.server_hash_func(SERVER_ID_MULTIPLIER*server_id, REPLICA_ID_MULTIPLIER*i)
             replica_hash = self.linear_probing_delete(replica_hash, server_id)
             self.hash_array[replica_hash] = 0
             idx = bisect.bisect_left(self.hash_map, replica_hash)
@@ -197,7 +201,7 @@ class ConsistentHashing:
             del self.hostname_to_id[server_hostname]
             del self.id_to_hostname[server_id]
             for i in range(self.num_replicas):
-                replica_hash = self.server_hash_func(server_id, i)
+                replica_hash = self.server_hash_func(SERVER_ID_MULTIPLIER*server_id, REPLICA_ID_MULTIPLIER*i)
                 replica_hash = self.linear_probing_delete(replica_hash, server_id)
                 self.hash_array[replica_hash] = 0
                 idx = bisect.bisect_left(self.hash_map, replica_hash)
