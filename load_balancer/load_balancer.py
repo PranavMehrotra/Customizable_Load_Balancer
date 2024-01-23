@@ -138,10 +138,7 @@ class LoadBalancer:
         else:
             for hostname in hostnames:
                 self.rw_lock.acquire_reader()
-                if (hostname not in self.servers):
-                    print("load_balancer: <Error> Hostname: '" + hostname + "' does not exist in the active list of servers!")    
-                else:
-                    # temp_rm_servers[hostname] = 1
+                if (hostname in self.servers):
                     temp_rm_servers.add(hostname)          ## FASTER
                 self.rw_lock.release_reader()
                     
