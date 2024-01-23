@@ -49,9 +49,17 @@ class ConsistentHashing:
         # self.__unique_checker()
 
     def server_hash_func(self, server_id, replica_id):
+        # HASH FUNCTION 1 (Given in assignment)
         hash = (server_id*server_id) % self.num_slots
         hash += (replica_id*replica_id) % self.num_slots
         hash += (2*replica_id + 25) % self.num_slots
+         
+        # HASH FUNCTION 2 (Changed hash function) => Uncomment to do Analysis 4
+        # hash = (server_id**2) % self.num_slots
+        # hash += (replica_id**3) % self.num_slots
+        # hash += (server_id*replica_id + 42) % self.num_slots
+        
+        
         # print(f"consistent_hashing: Server: {server_id}, Replica: {replica_id}, Hash: {hash}")
         return hash % self.num_slots
     
