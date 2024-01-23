@@ -35,7 +35,7 @@ async def home(request):
 
     try:
         # Send the request to the server and get the response, use aiohttp
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=0.5)) as session:
             async with session.get(f'http://{server}:{SERVER_PORT}/home') as response:
             # async with request.app['client_session'].get(f'http://{server}:{SERVER_PORT}/home') as response:
                 response_json = await response.json()
@@ -68,10 +68,9 @@ async def add_server_handler(request):
         print(payload, flush=True)
         # Get the number of servers to be added
         num_servers = int(payload['n'])
-        # num_servers = 3
         # Get the list of preferred hostnames
         pref_hosts = list(payload['hostnames'])
-        # pref_hosts = ['pranav']
+        
         print(f"client_handler: Received Request to add N: {num_servers} servers, Hostnames: {pref_hosts}", flush=True)
     except:
         response_json = {
