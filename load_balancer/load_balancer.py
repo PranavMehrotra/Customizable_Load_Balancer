@@ -20,14 +20,13 @@ from docker_utils import spawn_server_cntnr, kill_server_cntnr
 SLEEP_AFTER_SERVER_ADDITION = 1
 
 class LoadBalancer:
-    def __init__(self):
+    def __init__(self, initial_servers: list):
         
         # self.servers = {} # dictionary of active servers (key: hostname, value: port)
         self.servers = set() # set of active servers, no need to store port number, as it is always 5000
         self.rw_lock = RWLock()  # reader-writer lock to protect the self.servers set
         self.socket = None
         
-        initial_servers = ['server1', 'server2', 'server3', 'server4']
         # spawn the initial set of servers
         for hostname in initial_servers:
             done = spawn_server_cntnr(hostname)
@@ -38,7 +37,7 @@ class LoadBalancer:
             # self.servers[hostname] = port
             self.servers.add(hostname)
             self.rw_lock.release_writer()
-            time.sleep(SLEEP_AFTER_SERVER_ADDITION)
+            # time.sleep(SLEEP_AFTER_SERVER_ADDITION)
         
         
         self.consistent_hashing = ConsistentHashing(server_hostnames=initial_servers, num_servers=len(initial_servers))
@@ -85,7 +84,7 @@ class LoadBalancer:
             else:     # add the newly spawned server to the dictionary of servers
                 final_add_server_set.add(server)
 
-            time.sleep(SLEEP_AFTER_SERVER_ADDITION)
+            # time.sleep(SLEEP_AFTER_SERVER_ADDITION)
             
         
           
@@ -204,9 +203,6 @@ class LoadBalancer:
                 continue
         self.rw_lock.release_writer()
         
-        # close the docker containers and corresponding threads for the servers that were finally removed
-        for server in servers_rem_f:
-            kill_server_cntnr(server)
         
         return len(servers_rem_f), servers_rem_f, error 
                 

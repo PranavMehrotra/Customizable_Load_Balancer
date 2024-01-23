@@ -159,6 +159,8 @@ async def remove_server_handler(request):
     for server in removed_servers:
         hb_threads[server].stop()
         del hb_threads[server]
+        # close the docker containers and corresponding threads for the servers that were finally removed
+        kill_server_cntnr(server)
 
     # Return the full list of servers in the system
     server_list = lb.list_servers()
@@ -200,13 +202,14 @@ async def not_found(request):
 def run_load_balancer():
     global lb
     global hb_threads
-    lb = LoadBalancer()
+    initial_servers = ['server1', 'server2', 'server3']
+    lb = LoadBalancer(initial_servers)
     tem_servers = lb.list_servers()
     # print(tem_servers)
     for server in tem_servers:
-        hb_threads[server] = HeartBeat(lb, server)
-        hb_threads[server].start()
-        # t1.start()
+        t1 = HeartBeat(lb, server)
+        hb_threads[server] = t1
+        t1.start()
     app = web.Application()
     app.router.add_get('/home', home)
     app.router.add_post('/add', add_server_handler)

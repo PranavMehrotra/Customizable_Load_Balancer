@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from load_balancer import LoadBalancer
 
 HEARTBEAT_INTERVAL = 0.2
+SEND_FIRST_HEARTBEAT_AFTER = 0.5
 
 class HeartBeat(threading.Thread):
     def __init__(self, lb: LoadBalancer, server_name, server_port=5000):
@@ -33,7 +34,7 @@ class HeartBeat(threading.Thread):
         server_name = self._server_name
         server_port = self._server_port
         print("heartbeat: Heartbeat thread started for server: ", server_name)
-        
+        time.sleep(SEND_FIRST_HEARTBEAT_AFTER)
         cntr = 0
         while True:
             # Check if the thread is stopped
