@@ -1,5 +1,4 @@
 import bisect
-import time
 import numpy as np
 import sys
 import os
@@ -8,7 +7,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from RWLock import RWLock
 
 INITIAL_SERVER_ID = 3742
-SERVER_ID_MULTIPLIER = 17
+SERVER_ID_MULTIPLIER = 1
 REPLICA_ID_MULTIPLIER = 42
 
 class ConsistentHashing:

@@ -1,13 +1,6 @@
 import sys
-import socketserver
-import http.server
-import threading
 import sys
 import os
-import json
-import random
-import time
-import datetime
 
 # add the path to the parent directory to the sys.path list
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -15,8 +8,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 # from ..consistent_hashing import consistent_hashing
 from RWLock import RWLock
 from consistent_hashing import ConsistentHashing
-from utils import generate_new_hostname
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
+from client_handler import generate_new_hostname
 
 SLEEP_AFTER_SERVER_ADDITION = 1
 
@@ -261,7 +254,4 @@ class LoadBalancer:
     #         print("load_balancer: <Error> Could not save the load balancer analysis csv file due to: " + str(e))
     #         return False
             
-        
-        
-        
-        
+

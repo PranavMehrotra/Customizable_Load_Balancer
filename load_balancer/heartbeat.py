@@ -1,11 +1,8 @@
 import threading
-import signal
 import sys
 import os
 import requests
-import concurrent.futures
 import time
-# import aiohttp
 import requests
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))

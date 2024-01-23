@@ -1,7 +1,5 @@
 from aiohttp import web
 import random
-import asyncio
-import requests
 from load_balancer import LoadBalancer
 from heartbeat import HeartBeat
 from docker_utils import spawn_server_cntnr, kill_server_cntnr
@@ -9,6 +7,7 @@ import aiohttp
 
 SERVER_PORT = 5000
 NUM_INITIAL_SERVERS = 3
+RANDOM_SEED = 4326
 
 lb : LoadBalancer = ""
 hb_threads = {}
@@ -224,6 +223,7 @@ async def not_found(request):
 def run_load_balancer():
     global lb
     global hb_threads
+    random.seed(RANDOM_SEED)
     initial_servers = []
     for i in range(NUM_INITIAL_SERVERS):
         initial_servers.append(f"server{i+1}")
@@ -249,3 +249,11 @@ def run_load_balancer():
 
     for thread in hb_threads.values():
         thread.join()
+
+# function to generate a new random hostname for a server
+def generate_new_hostname():
+        new_hostname = "S_"
+        for i in range(6):
+            new_hostname += str(random.randint(0, 9))
+
+        return new_hostname

@@ -1,19 +1,10 @@
 # Import necessary modules
 from aiohttp import web
 import os
-import datetime
-import json
-import random
-import string
-import asyncio
 
 # Initialize server_id as an empty string (will be set later)
 server_id = ""
 
-# Function to generate a random string of a given length
-def generate_random_string(length):
-    letters = string.ascii_letters
-    return ''.join(random.choice(letters) for _ in range(length))
 
 # Define an asynchronous function for handling the home endpoint
 async def home(request):
@@ -66,9 +57,7 @@ def run_server():
 
 # Entry point of the script
 if __name__ == '__main__':
-    # Get the server_id from the environment variable, or generate a random string if not set
+    # Get the server_id from the environment variable
     server_id = os.environ.get("SERVER_ID")
-    if not server_id:
-        server_id = generate_random_string(6)
     # Run the web server
     run_server()
