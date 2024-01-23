@@ -7,6 +7,7 @@ import json
 
 # write code to send 10000 async requests to the load balancer via GET requests
 frequency_map = {}
+NUM_REQUESTS = 10000
 
 async def send_request(
         session: aiohttp.ClientSession, 
@@ -19,7 +20,7 @@ async def send_request(
     try:
         async with session.get(f'http://{address}:{port}{path}') as response:
             resp = await response.text()
-            print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
+            # print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
             resp = json.loads(resp)
             
             message = resp['message']
@@ -57,11 +58,15 @@ if __name__ == '__main__':
         # Get the address of the load balancer
         lb_address = "127.0.0.1"
         port_no = 5000     # set to this for now, as LB not ready yet - finally 5000
+        # num_requests = 10000
 
         start = time.time()
         # Send 10000 requests to the load balancer
-        asyncio.run(send_requests(10000, lb_address, port_no))
+        asyncio.run(send_requests(NUM_REQUESTS, lb_address, port_no))
         end = time.time()
+
+        for server in frequency_map:
+            print(f"{server}: {frequency_map[server]}/{NUM_REQUESTS}")
 
         plot_bar_chart(frequency_map)
         print(f"Time taken to send 10000 requests: {end-start} seconds")
