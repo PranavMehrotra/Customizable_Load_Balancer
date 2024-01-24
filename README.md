@@ -78,7 +78,9 @@ To initiate the deployment of load balancer containers, execute the following co
 ```bash
 make deploy
 ```
-This command will launch the load balancer container, which, in turn, will spawn the initial N server Docker containers along with their heartbeat probing threads. Ensure that the necessary configurations are in place for a seamless deployment.
+This command will launch the load balancer container, which, in turn, will spawn the initial N server Docker containers along with their heartbeat probing threads. Ensure that the necessary configurations are in place for a seamless deployment. The command also clears any existing containers using server or load balancer image (i.e. execute make clean).
+
+<span style="color:red">**Note:** The deployment command launches Docker in the background mode. Therefore, users are advised to check the docker-compose logs to view load-balancer logs.</span>
 
 ## Interact with System
 To interact with the load balancer and send GET/POST requests, launch the interactive terminal using the following command:
@@ -106,7 +108,8 @@ It is advisable to run this command before executing the main code to eliminate 
 
 # Design Choices
 <ol>
-<li> 
+<li> When executing the /add endpoint, users may provide existing server hostnames as part of the request. In such cases, the load balancer takes a proactive approach to ensure that the specified num_add parameter is honored. Even if the user supplies hostnames that already exist in the system, the load balancer will ignore already existing hostnames and generate new hostnames for additional servers to fulfill the exact count specified by num_add.
+<li> When executing the /rm endpoint, users may provide hostnames for removal. To ensure the specified number of servers to be removed is consistently achieved, the load balancer employs a strategy wherein, if the user-provided hostname doesn't exist in the system, it randomly selects and removes a server hostname from the existing set.
 </ol>
 
 # Troubleshooting
@@ -132,20 +135,55 @@ Stop all runing container: docker rm $(docker ps -a -q)
 # Evaluation
 
 ## Server Load Analysis
-to analys distribution load of 10,000 async rerquests on N=3 servers run following commands.
-cd ananlysis
+To analyze the distribution load of 10,000 asynchronous requests on N=3 servers, follow these commands:
+
+#### Change to the 'analysis' directory:
+
+```bash
+cd analysis
+```
+#### Run the Python script for analysis:
+```bash
 python analysis.py
+```
 
-the python scripts sends 10,000 async requests 
+The analysis.py script sends 10,000 asynchronous requests (/home requests) to the load balancer. Based on the responses received, it plots a frequency map illustrating how many responses come from each server.
 
-<img src="analysis/server_id_mul_1/new_server_freq_n_2.png" >
+Ensure that the necessary dependencies are installed and the system is properly configured before executing the analysis script.
+
+<img src="analysis/server_id_mul_1/new_server_freq_n_3.png" >
+
 
 ## Server Avg Load Analysis
 ## Server Failure Testing
 ## Hashing Function Variation Analysis
+To utilize the new hash function i^2 + j^3 + ij + 42 where i is server_id and j is replica_id, in the load balancer, follow these steps:
 
+1. Open the file `load_balancer/consistent_hashing.py` and locate the `server_hash_func` definition.
 
+2. Comment out lines 53-55:
 
+   ```python
+        #hash = (server_id*server_id) % self.num_slots
+        #hash += (replica_id*replica_id) % self.num_slots
+        #hash += (2*replica_id + 25) % self.num_slots
+        
+    ```
+3. Uncomment lines 58-60:
+
+   ```python
+        hash = (server_id**2) % self.num_slots
+        hash += (replica_id**3) % self.num_slots
+        hash += (server_id*replica_id + 42) % self.num_slots
+
+    ```
+3. Save the changes.
+
+4. Re-run the analysis script after deploying the load balancer again.
+
+5. Ensure that you have cleared previous containers and images, and rebuild the project before executing the analysis script. This ensures that the new hash function is applied to the load balancer and the analysis is based on the updated configuration.
+
+The evaluation results of new hash function on variable number of servers are present in `analysis/server_id_mul_1`
 
 # Group Details
 1. Pranav Mehrotra (20CS10085)
