@@ -151,39 +151,34 @@ The analysis.py script sends 10,000 asynchronous requests (/home requests) to th
 
 Ensure that the necessary dependencies are installed and the system is properly configured before executing the analysis script.
 
-<img src="analysis/server_id_mul_1/new_server_freq_n_3.png" >
+<img src="analysis/old_hash/n_3_load.png" >
+
 
 
 ## Server Avg Load Analysis
+
+<img src = "analysis/part2.png">
+
 ## Server Failure Testing
 ## Hashing Function Variation Analysis
-To utilize the new hash function i^2 + j^3 + ij + 42 where i is server_id and j is replica_id, in the load balancer, follow these steps:
+After testing various combinations of ** SHA-256, SHA-1, and MD5** for request and server hashing (3x3 matrix), we found that the most effective combination is:
 
-1. Open the file `load_balancer/consistent_hashing.py` and locate the `server_hash_func` definition.
+- Server Hashing: SHA-1
+- Request Hashing: MD5
 
-2. Comment out lines 53-55:
+To implement this new hash function configuration, follow these steps:
 
-   ```python
-        #hash = (server_id*server_id) % self.num_slots
-        #hash += (replica_id*replica_id) % self.num_slots
-        #hash += (2*replica_id + 25) % self.num_slots
-        
-    ```
-3. Uncomment lines 58-60:
+1. Open the file `load_balancer/consistent_hashing.py` and locate the `server_hash_func`  and `request_hash_func` definition.
 
-   ```python
-        hash = (server_id**2) % self.num_slots
-        hash += (replica_id**3) % self.num_slots
-        hash += (server_id*replica_id + 42) % self.num_slots
+2. Comment the alternative hash function provided. 
 
-    ```
 3. Save the changes.
 
 4. Re-run the analysis script after deploying the load balancer again.
 
 5. Ensure that you have cleared previous containers and images, and rebuild the project before executing the analysis script. This ensures that the new hash function is applied to the load balancer and the analysis is based on the updated configuration.
 
-The evaluation results of new hash function on variable number of servers are present in `analysis/server_id_mul_1`
+The evaluation results of new hash function on variable number of servers are present in `analysis/md5_hash`
 
 # Group Details
 1. Pranav Mehrotra (20CS10085)

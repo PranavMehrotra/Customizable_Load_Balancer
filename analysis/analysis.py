@@ -4,10 +4,20 @@ import time
 import os
 import matplotlib.pyplot as plt
 import json
+import numpy as np
+
+
+def std_dev(nums):
+  return np.std(nums)
+
+def avg(nums):
+  return np.mean(nums)
+
 
 # write code to send 10000 async requests to the load balancer via GET requests
 frequency_map = {}
-NUM_REQUESTS = 5000
+NUM_REQUESTS = 10000
+
 
 async def send_request(
         session: aiohttp.ClientSession, 
@@ -105,6 +115,12 @@ if __name__ == '__main__':
 
         for server in frequency_map:
             print(f"{server}: {frequency_map[server]}/{NUM_REQUESTS}")
+
+
+        nums_list = list(frequency_map.values())
+        print("Standard deviation:", std_dev(nums_list))
+        print("Average:", avg(nums_list))
+
 
         plot_bar_chart(frequency_map)
         print(f"Time taken to send 10000 requests: {end-start} seconds")

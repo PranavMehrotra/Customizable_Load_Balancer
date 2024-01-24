@@ -55,8 +55,8 @@ class ConsistentHashing:
         hash += (replica_id*replica_id) % self.num_slots
         hash += (2*replica_id + 25) % self.num_slots
          
-        # HASH FUNCTION 2 (MD5 hash function) => Uncomment to do Analysis 4
-        # Using MD5 hash function, for uniform distribution of hash values, so that the replicas are distributed uniformly
+        # HASH FUNCTION 2 (SHA1 hash function) => Uncomment to do Analysis 4
+        # Using SHA1 hash function, for uniform distribution of hash values, so that the replicas are distributed uniformly
         # hash_key = str(server_id) + str(replica_id)
         # hash_digest = hashlib.sha1(hash_key.encode('utf-8')).digest()
         # hash = sum(hash_digest) % self.num_slots
