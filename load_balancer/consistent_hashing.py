@@ -51,29 +51,29 @@ class ConsistentHashing:
 
     def server_hash_func(self, server_id, replica_id):
         # HASH FUNCTION 1 (Given in assignment)
-        hash = (server_id*server_id) % self.num_slots
-        hash += (replica_id*replica_id) % self.num_slots
-        hash += (2*replica_id + 25) % self.num_slots
+        # hash = (server_id*server_id) % self.num_slots
+        # hash += (replica_id*replica_id) % self.num_slots
+        # hash += (2*replica_id + 25) % self.num_slots
          
         # HASH FUNCTION 2 (SHA1 hash function) => Uncomment to do Analysis 4
         # Using SHA1 hash function, for uniform distribution of hash values, so that the replicas are distributed uniformly
-        # hash_key = str(server_id) + str(replica_id)
-        # hash_digest = hashlib.sha1(hash_key.encode('utf-8')).digest()
-        # hash = sum(hash_digest) % self.num_slots
+        hash_key = str(server_id) + str(replica_id)
+        hash_digest = hashlib.sha1(hash_key.encode('utf-8')).digest()
+        hash = sum(hash_digest) % self.num_slots
         
         # print(f"consistent_hashing: Server: {server_id}, Replica: {replica_id}, Hash: {hash}")
         return hash % self.num_slots
     
     def request_hash_func(self, request_id):
         # HASH FUNCTION 1 (Given in assignment)
-        hash = (request_id*request_id) % self.num_slots
-        hash += (2*request_id + 17) % self.num_slots
+        # hash = (request_id*request_id) % self.num_slots
+        # hash += (2*request_id + 17) % self.num_slots
 
         # HASH FUNCTION 2 (MD5 hash function) => Uncomment to do Analysis 4
         # Using MD5 hash function, so that the requests are distributed uniformly across all the server replicas
-        # hash_key = str(request_id)
-        # hash_digest = hashlib.md5(hash_key.encode('utf-8')).digest()
-        # hash = sum(hash_digest) % self.num_slots
+        hash_key = str(request_id)
+        hash_digest = hashlib.md5(hash_key.encode('utf-8')).digest()
+        hash = sum(hash_digest) % self.num_slots
 
         print(f"consistent_hashing: Request: {request_id}, Hash: {hash%self.num_slots}")
         return hash % self.num_slots

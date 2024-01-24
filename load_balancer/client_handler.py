@@ -6,7 +6,7 @@ from docker_utils import spawn_server_cntnr, kill_server_cntnr
 import aiohttp
 
 SERVER_PORT = 5000
-NUM_INITIAL_SERVERS = 3
+NUM_INITIAL_SERVERS = 6
 RANDOM_SEED = 4326
 
 lb : LoadBalancer = ""

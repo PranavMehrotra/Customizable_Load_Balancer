@@ -110,6 +110,7 @@ It is advisable to run this command before executing the main code to eliminate 
 <ol>
 <li> When executing the /add endpoint, users may provide existing server hostnames as part of the request. In such cases, the load balancer takes a proactive approach to ensure that the specified num_add parameter is honored. Even if the user supplies hostnames that already exist in the system, the load balancer will ignore already existing hostnames and generate new hostnames for additional servers to fulfill the exact count specified by num_add.
 <li> When executing the /rm endpoint, users may provide hostnames for removal. To ensure the specified number of servers to be removed is consistently achieved, the load balancer employs a strategy wherein, if the user-provided hostname doesn't exist in the system, it randomly selects and removes a server hostname from the existing set.
+<li> Every server is equipped with a heartbeat thread that sends a heartbeat message every 0.2 seconds. If no heartbeat is detected for two consecutive attempts, the server is declared dead, triggering the spawning of a new server. This mechanism prevents premature declarations of server death due to network fluctuations, ensuring stability in the system.</li>
 </ol>
 
 # Troubleshooting
@@ -157,9 +158,27 @@ Ensure that the necessary dependencies are installed and the system is properly 
 
 ## Server Avg Load Analysis
 
+Modify the NUM_INITIAL_SERVERS = 3 line number 9 of `load_balancer/client_handler.py` with 2 to 6 and run analysis.py to get average load and standard distribution of load distribution.
+Follow folder `analysis/old_hash/` for exact distribution bar plots. 
+
 <img src = "analysis/part2.png">
 
 ## Server Failure Testing
+
+To analyze the server failure scenario execute the following:
+
+#### Change to the 'analysis' directory:
+
+```bash
+cd analysis
+```
+#### Run the Python script for analysis:
+```bash
+python kill_server.py
+```
+
+The kill_server.py script is designed to simulate the process of killing a server, validating the functionality of all endpoints in the event of server failure, and assessing the prompt respawn of the server. The effectiveness of server respawn is verified through the analysis of load distribution and the count of dropped requests(failed) during the time it takes for the heartbeat mechanism to detect and respawn the server.
+
 ## Hashing Function Variation Analysis
 After testing various combinations of ** SHA-256, SHA-1, and MD5** for request and server hashing (3x3 matrix), we found that the most effective combination is:
 
