@@ -8,6 +8,7 @@ import requests
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from load_balancer import LoadBalancer
+from docker_utils import kill_server_cntnr
 
 HEARTBEAT_INTERVAL = 0.2
 SEND_FIRST_HEARTBEAT_AFTER = 0.5
@@ -48,7 +49,7 @@ class HeartBeat(threading.Thread):
                     # if response.status != 200 and {await response.text()}['message'] != "ok":
                     
                     ## To-Do: Check for timeout also
-                response = requests.get(f'http://{server_name}:{server_port}/heartbeat', timeout=0.05)
+                response = requests.get(f'http://{server_name}:{server_port}/heartbeat', timeout=0.1)
                 if response.status_code != 200 and response.status_code != 400:
                     cntr += 1
                     if cntr >= 2:
@@ -63,6 +64,7 @@ class HeartBeat(threading.Thread):
                         
                         #remove server from
                         lb.remove_servers(1, [server_name])
+                        kill_server_cntnr(server_name)
                         
                         # reinstantiate an image of the server
                         lb.add_servers(1, [server_name])
@@ -92,6 +94,11 @@ class HeartBeat(threading.Thread):
                     
                     #remove server from the loadbalancer
                     lb.remove_servers(1, [server_name])
+
+                    try:
+                        kill_server_cntnr(server_name)
+                    except Exception as e:
+                        print(f"heartbeat: could not kill server {server_name}\nError: {e}")
                     
                     # reinstantiate an image of the server
                     lb.add_servers(1, [server_name])

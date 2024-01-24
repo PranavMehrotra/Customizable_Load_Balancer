@@ -1,12 +1,16 @@
 import aiohttp
 import asyncio
 import time
+import threading
 import os
 import json
 import random
 
+from analysis import plot_bar_chart
+
 # write code to send 10000 async requests to the load balancer via GET requests
 frequency_map = {}
+unique_servers = []
 
 async def send_request(
         session: aiohttp.ClientSession, 
@@ -16,17 +20,22 @@ async def send_request(
         path: str = "/home",
         data: dict = None):
     
-    global frequency_map
+    global frequency_map, unique_servers
     if path == '/home' or path == '/rep':   # GET request
         try:
             async with session.get(f'http://{address}:{port}{path}') as response:
                 resp = await response.text()
-                if path == '/home':
+                if path == '/rep':
+                    print(resp)     # print the status of the servers
+                elif path == '/home':
                     resp = json.loads(resp)
                     # print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
                     message = resp['message']
+                    # if "Hello from Server" not in message:
+                    #     print(message)
                     server_name = message.split(' ')[-1]
                     if server_name not in frequency_map:
+                        unique_servers.append(server_name)
                         frequency_map[server_name] = 1
                     else:
                         frequency_map[server_name] += 1
@@ -74,59 +83,90 @@ async def send_requests(
     except Exception as e:
         print(f"Error: An exception occurred while sending multiple {path} requests: {e}")
 
+def kill_server():
+    global unique_servers
+    time.sleep(7)
+    # print(unique_servers, len(unique_servers), flush=True)
+    hostname = random.choice(unique_servers)
+    print(f"Killing server: {hostname} ...")
+    os.system(f"sudo docker stop {hostname} && sudo docker rm {hostname}")
+    print(f"Success: Container with ID {hostname} stopped and removed.")
+
 
 if __name__ == "__main__":
     # send 2500 requests initially (/add)
     address = "127.0.0.1"
     print("Before killing server ...\n")
-    num_requests = 2500
+    num_requests = 30000
+
+    # add a server (/add)
+    data = {
+        'n': 1,
+        'hostnames': ['serverX']
+    }
+
+    asyncio.run(send_requests(1, address, 5000, '/add', data=data))
+    asyncio.run(send_requests(1, address, 5000, '/rep'))
+
+    # remove a server (/rm)
+    data = {
+        'n': 1,
+        'hostnames': ['serverX']
+    }
+
+    asyncio.run(send_requests(1, address, 5000, '/rm', data=data))
+    asyncio.run(send_requests(1, address, 5000, '/rep'))
+
+    # start thread to kill server
+    threading.Thread(target=kill_server).start()
+
+    asyncio.run(send_requests(num_requests//6, address, 5000, "/home"))
     asyncio.run(send_requests(num_requests, address, 5000, "/home"))
-    print("Server stats before killing server:\n")
+    print("Server stats:\n")
     for server in frequency_map:
         print(f"{server}: {frequency_map[server]}/{num_requests}")
 
-    print("\n")
-    # kill server 1
-    try:
-        # Remove the container
-        hostname = random.choice(list(frequency_map.keys()))
-        print(f"Killing server: {hostname} ...")
-        start = time.time()
-        os.system(f"sudo docker stop {hostname} && sudo docker rm {hostname}")
-        print(f"Success: Container with ID {hostname} stopped and removed.")
-    
-        ##### CODE TO FIND END TIME NEEDED #####
+    plot_bar_chart(frequency_map)
 
-        # reset frequency map
-        frequency_map = {server: 0 for server in frequency_map}
-        print(frequency_map)
+    # exit(0)
 
-        # send 2500 requests again (/home)
-        asyncio.run(send_requests(num_requests, address, 5000, '/home'))
-        print("Server stats after killing server:\n")
-        for server in frequency_map:
-            print(f"{server}: {frequency_map[server]}/{num_requests}")
+    # print("\n")
+    # # kill server 1
+    # try:
+    #     # Remove the container
 
-        # add a server (/add)
-        data = {
-            'n': 1,
-            'hostnames': ['serverX']
-        }
+    #     # os.system(f"sudo docker stop {hostname} && sudo docker rm {hostname}")
 
-        asyncio.run(send_requests(1, address, 5000, '/add', data=data))
-        asyncio.run(send_requests(1, address, 5000, '/rep'))
+    #     # reset frequency map
+    #     frequency_map = {server: 0 for server in frequency_map}
+    #     print(frequency_map)
 
-        # remove a server (/rm)
-        data = {
-            'n': 1,
-            'hostnames': ['serverX']
-        }
+    #     # send 2500 requests again (/home)
+    #     asyncio.run(send_requests(num_requests, address, 5000, '/home'))
+    #     print("Server stats after killing server:\n")
+    #     for server in frequency_map:
+    #         print(f"{server}: {frequency_map[server]}/{num_requests}")
 
-        asyncio.run(send_requests(1, address, 5000, '/rm', data=data))
-        asyncio.run(send_requests(1, address, 5000, '/rep'))
+    #     # add a server (/add)
+    #     data = {
+    #         'n': 1,
+    #         'hostnames': ['serverX']
+    #     }
+
+    #     asyncio.run(send_requests(1, address, 5000, '/add', data=data))
+    #     asyncio.run(send_requests(1, address, 5000, '/rep'))
+
+    #     # remove a server (/rm)
+    #     data = {
+    #         'n': 1,
+    #         'hostnames': ['serverX']
+    #     }
+
+    #     asyncio.run(send_requests(1, address, 5000, '/rm', data=data))
+    #     asyncio.run(send_requests(1, address, 5000, '/rep'))
 
 
-    except Exception as e:
-        print(f"Error: An exception occurred during container removal: {e}")
+    # except Exception as e:
+    #     print(f"Error: An exception occurred during container removal: {e}")
 
     
