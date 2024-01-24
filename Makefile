@@ -2,7 +2,7 @@ IMAGES := $(shell sudo docker images -a | awk 'NR>1 && ($$1 ~ /^server_img/ || $
 CONTAINERS := $(shell sudo docker ps -a | awk 'NR>1 && ($$2 ~ /^server_img/ || $$2 ~ /^load_balancer_img/) {print $$1}')
 
 deploy: clean
-	sudo docker-compose up -d
+	sudo docker-compose up
 
 install: build servers
 

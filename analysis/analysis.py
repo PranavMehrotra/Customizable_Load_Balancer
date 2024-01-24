@@ -7,41 +7,79 @@ import json
 
 # write code to send 10000 async requests to the load balancer via GET requests
 frequency_map = {}
-NUM_REQUESTS = 10000
+NUM_REQUESTS = 5000
 
 async def send_request(
         session: aiohttp.ClientSession, 
         request_id : int,
         address: str, 
         port: int = 5000, 
-        path: str = "/home"):
+        path: str = "/home",
+        data: dict = None):
     
     global frequency_map
-    try:
-        async with session.get(f'http://{address}:{port}{path}') as response:
-            resp = await response.text()
-            # print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
-            resp = json.loads(resp)
-            
-            message = resp['message']
-            server_name = message.split(' ')[-1]
-            if server_name not in frequency_map:
-                frequency_map[server_name] = 1
-            else:
-                frequency_map[server_name] += 1
+    if path == '/home' or path == '/rep':   # GET request
+        try:
+            async with session.get(f'http://{address}:{port}{path}') as response:
+                resp = await response.text()
+                if path == '/rep':
+                    print(resp)     # print the status of the servers
+                elif path == '/home':
+                    resp = json.loads(resp)
+                    if response.status != 200:  # failure
+                        print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
+                    message = resp['message']
+                    # if "Hello from Server" not in message:
+                    #     print(message)
+                    server_name = message.split(' ')[-1]
+                    if server_name not in frequency_map:
+                        frequency_map[server_name] = 1
+                    else:
+                        frequency_map[server_name] += 1
 
-    except Exception as e:
-        print(f"Request ID: {request_id} | Error: An exception occurred during client request: {e}")
+        except Exception as e:
+            print(f"Request ID: {request_id} | Error: An exception occurred during client request: {e}")
 
-async def send_requests(num_requests: int, address: str, port_no: int):
+    elif path == '/add':    # POST request
+        try:
+            async with session.post(f'http://{address}:{port}{path}', json=data) as response:
+                resp = await response.text()
+                print(resp)
+                # resp = json.loads(resp)
+                # # print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
+
+        except Exception as e:
+            print(f"Request ID: {request_id} | Error: An exception occurred during client request: {e}")
+
+    elif path == '/rm':     # DELETE request
+        try:
+            async with session.delete(f'http://{address}:{port}{path}', json=data) as response:
+                resp = await response.text()
+                # print(f"Request ID: {request_id} | Status Code: {response.status} - Response: {resp}")
+
+                print(resp)
+                # resp = json.loads(resp)
+
+        except Exception as e:
+            print(f"Request ID: {request_id} | Error: An exception occurred during client request: {e}")
+
+
+async def send_requests(
+        num_requests: int, 
+        address: str, 
+        port_no: int, 
+        path: str = "/home", 
+        data: dict = None):
     try:
         async with aiohttp.ClientSession() as session:
             tasks = []
             for i in range(num_requests):
-                tasks.append(send_request(session, i+1, address, port=port_no))
+                tasks.append(send_request(session, i+1, address, port=port_no, path=path, data=data))
             await asyncio.gather(*tasks)
+        print(f"Success: {num_requests} {path} requests to the load balancer sent successfully.")
     except Exception as e:
-        print(f"Error: An exception occurred while sending multiple client requests: {e}")
+        print(f"Error: An exception occurred while sending multiple {path} requests: {e}")
+
 
 def plot_bar_chart(frequency_map):
     servers = list(frequency_map.keys())
