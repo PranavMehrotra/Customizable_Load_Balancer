@@ -85,25 +85,43 @@ async def send_requests(
 
 def kill_server():
     global unique_servers
-    time.sleep(7)
+    time.sleep(5)
     # print(unique_servers, len(unique_servers), flush=True)
     hostname = random.choice(unique_servers)
     print(f"Killing server: {hostname} ...")
     os.system(f"sudo docker stop {hostname} && sudo docker rm {hostname}")
     print(f"Success: Container with ID {hostname} stopped and removed.")
 
-
+    return 
+    
 if __name__ == "__main__":
     # send 2500 requests initially (/add)
     address = "127.0.0.1"
-    print("Before killing server ...\n")
+
+    # start thread to kill server
+    t = threading.Thread(target=kill_server)
+    t.start()
+    
     num_requests = 30000
+    asyncio.run(send_requests(num_requests//30, address, 5000, "/home"))
+    asyncio.run(send_requests(num_requests, address, 5000, "/home"))
+    print("Server stats:\n")
+    for server in frequency_map:
+        print(f"{server}: {frequency_map[server]}/{num_requests}")
+
+    plot_bar_chart(frequency_map)
+    
+    t.join()
+    
+    
+
 
     # add a server (/add)
     data = {
         'n': 1,
         'hostnames': ['serverX']
     }
+
 
     asyncio.run(send_requests(1, address, 5000, '/add', data=data))
     asyncio.run(send_requests(1, address, 5000, '/rep'))
@@ -117,16 +135,7 @@ if __name__ == "__main__":
     asyncio.run(send_requests(1, address, 5000, '/rm', data=data))
     asyncio.run(send_requests(1, address, 5000, '/rep'))
 
-    # start thread to kill server
-    threading.Thread(target=kill_server).start()
 
-    asyncio.run(send_requests(num_requests//6, address, 5000, "/home"))
-    asyncio.run(send_requests(num_requests, address, 5000, "/home"))
-    print("Server stats:\n")
-    for server in frequency_map:
-        print(f"{server}: {frequency_map[server]}/{num_requests}")
-
-    plot_bar_chart(frequency_map)
 
     # exit(0)
 
