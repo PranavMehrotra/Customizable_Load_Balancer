@@ -5,8 +5,11 @@ import numpy as np
 
 # Simulated data (replace this with your actual data)
 num_servers = [2, 3, 4, 5, 6]
+# average_load = [5000,3333.3333333 ,2500, 2000, 1666.66667]
+# std_deviation_load = [771, 44.49968788, 692.3998, 796.5940161, 700.905763201]
+
 average_load = [5000,3333.3333333 ,2500, 2000, 1666.66667]
-std_deviation_load = [771, 44.49968788, 692.3998, 796.5940161, 700.905763201]
+std_deviation_load = [1098, 320.264820, 451.886047, 513.2928988, 468.46866]
 
 # Plotting
 plt.figure(figsize=(10, 6))

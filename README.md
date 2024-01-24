@@ -180,7 +180,7 @@ python kill_server.py
 The kill_server.py script is designed to simulate the process of killing a server, validating the functionality of all endpoints in the event of server failure, and assessing the prompt respawn of the server. The effectiveness of server respawn is verified through the analysis of load distribution and the count of dropped requests(failed) during the time it takes for the heartbeat mechanism to detect and respawn the server.
 
 ## Hashing Function Variation Analysis
-After testing various combinations of ** SHA-256, SHA-1, and MD5** for request and server hashing (3x3 matrix), we found that the most effective combination is:
+After testing all the 9 combinations of **SHA-256, SHA-1, and MD5** for request and server hashing, we found that the most effective combination is:
 
 - Server Hashing: SHA-1
 - Request Hashing: MD5
@@ -198,6 +198,8 @@ To implement this new hash function configuration, follow these steps:
 5. Ensure that you have cleared previous containers and images, and rebuild the project before executing the analysis script. This ensures that the new hash function is applied to the load balancer and the analysis is based on the updated configuration.
 
 The evaluation results of new hash function on variable number of servers are present in `analysis/md5_hash`
+
+<img src="analysis/part2_new.png">
 
 # Group Details
 1. Pranav Mehrotra (20CS10085)
